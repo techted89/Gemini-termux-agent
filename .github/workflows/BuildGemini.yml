@@ -59,7 +59,7 @@ jobs:
     - name: 🏗️ Run Build (Check, Assemble, and Tests)
       # Executes the 'build' task which typically includes dependency resolution, 
       # running checks, compiling Kotlin/Java code, running unit tests, and assembling the app.
-      run: ./gradlew build --scan --log 
+      run: ./gradlew build --warning-mode=all
 
     # --- Optional Steps (Useful for Android Apps) ---
     - name: 📦 Upload Artifact (e.g., APK/Bundle)
