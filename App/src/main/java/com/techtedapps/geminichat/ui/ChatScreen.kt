@@ -36,10 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.geminichat.ChatState
-import com.example.geminichat.ChatViewModel
-import com.example.geminichat.Message
-import com.example.geminichat.ui.theme.GeminiChatTheme
+import com.techtedapps.geminichat.ChatState
+import com.techtedapps.geminichat.ChatViewModel
+import com.techtedapps.geminichat.Message
+import com.techtedapps.geminichat.ui.theme.GeminiChatTheme
 
 /**
  * Main composable function for the Chat UI.
