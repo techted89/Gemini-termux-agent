@@ -1,31 +1,51 @@
-name: Kotlin/Gradle CI
+name: 📱 Android App Release Build
 
 on:
+  # Triggers the workflow on pushes to the main branch
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main ]
+  # Allows manual runs via the GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
-    # Use the latest stable Ubuntu runner environment
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: ⬇️ Checkout Repository
-      # Checks out your repository under $GITHUB_WORKSPACE, so the workflow can access it.
+    - name: 📦 Checkout Repository
+      # v4 is the latest, most stable version
       uses: actions/checkout@v4
 
-    - name: ☕ Set up JDK 17
-      # Sets up the Java Development Kit (JDK) required by Gradle.
-      # JDK 17 is the current recommended LTS version for most modern Kotlin/Android projects.
+    - name: 🛡️ Validate Gradle Wrapper
+      # Security best practice: validates the checksum of the gradlew script
+      uses: gradle/wrapper-validation-action@v2
+
+    - name: ☕ Set up Java 17 (Required by Android)
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-        # Caches the Gradle dependencies to speed up subsequent builds
-        cache: 'gradle'
+        cache: 'gradle' # Caches Gradle dependencies and SDK to speed up build
 
+//<<<<<<< feature-gemini-app-enhancements
+    - name: 🔨 Grant execution permission to gradlew
+      run: chmod +x gradlew
+
+    - name: ⚙️ Run Release Build (assembleRelease)
+      # Fixes the "SDK location not found" error by explicitly setting the variable.
+      # Also passes the secure API key.
+      run: |
+        export ANDROID_HOME=$HOME/Android/sdk
+        ./gradlew assembleRelease -PgeminiApiKey=${{ secrets.GEMINI_API_KEY }}
+
+    - name: ⬆️ Upload Release APK Artifact
+      # The app-release-unsigned.apk is the output of the assembleRelease task
+      uses: actions/upload-artifact@v4
+      with:
+        name: gemini-app-release-apk
+        path: App/build/outputs/apk/release/app-release-unsigned.apk
+        if-no-files-found: error
+// =======
     - name: 🕵️ List files in checkout directory
       run: ls -la
 
@@ -49,3 +69,4 @@ jobs:
         name: app-release
         path: App/build/outputs/apk/release/app-release-unsigned.apk
         # Adjust path based on your module and output directory
+// >>>>>>> main
