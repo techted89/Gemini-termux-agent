@@ -18,8 +18,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+//<<<<<<< feature-gemini-app-enhancements
         val geminiApiKey = project.properties["geminiApiKey"] ?: "YOUR_API_KEY"
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+//=======
+//>>>>>>> main
     }
 
     buildTypes {
