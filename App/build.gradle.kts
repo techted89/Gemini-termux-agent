@@ -1,10 +1,18 @@
+// Root build.gradle.kts (Project level)
+
 plugins {
-     id("com.android.application") version "8.1.1"
-     id("org.jetbrains.kotlin.android") version "1.8.10"          
-id("org.jetbrains.kotlin.plugin.compose") version "1.8.10"
+    // 1. UPDATE KOTLIN VERSION to 2.2.21 (Latest available stable version in search)
+    id("com.android.application") version "8.5.0" apply false
+    id("com.android.library") version "8.5.0" apply false
+    
+    // 2. Make sure you are using a modern Kotlin version here
+    id("org.jetbrains.kotlin.android") version "2.2.21" apply false 
 
+    // If you are using Kotlin 2.0+ (like 2.2.21), this is how you declare the Compose Compiler Plugin.
+    // The version should match the Kotlin version if you are using the new compiler plugin approach.
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" apply false 
 }
-
+//... other configurations
 android {
     namespace = "com.techtedapps.geminichat"
     compileSdk = 34
