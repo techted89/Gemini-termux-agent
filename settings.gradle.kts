@@ -1,9 +1,9 @@
+// settings.gradle
 pluginManagement {
-    // This block ensures Gradle can find the necessary plugins (like com.android.application)
     repositories {
-        google()
-        mavenCentral()
         gradlePluginPortal()
+        google() // <-- THIS IS CRITICAL
+        mavenCentral()
     }
 }
 
