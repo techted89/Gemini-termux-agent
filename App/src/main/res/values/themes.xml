@@ -1,4 +1,4 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.GeminiChat" parent="Theme.Material.Light.NoActionBar" />
+    <style name="Theme.GeminiChat" parent="Theme.MaterialComponents.Light.NoActionBar" />
 </resources>
