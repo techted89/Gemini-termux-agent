@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.geminichat"
+    namespace = "com.techtedapps.geminichat"
     compileSdk = 34
 
     defaultConfig {
