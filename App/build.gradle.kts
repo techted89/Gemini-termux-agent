@@ -1,22 +1,18 @@
 plugins {
-    // Updated Android Gradle Plugin (AGP) to a recommended stable version
-    id("com.android.application") version "8.6.1" apply false
-    id("com.android.library") version "8.6.1" apply false
-    
-    // Kotlin Gradle Plugin (KGP) - using the latest stable 2.2.21
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false 
-
-    // Compose Compiler Plugin using the new KGP 2.0+ approach
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" apply false 
+    // CRITICAL FIX: Explicitly applying the Android Application and Kotlin plugins 
+    // to resolve 'android { ... }' and 'implementation' calls.
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
+
 android {
     namespace = "com.techtedapps.geminichat"
-    compileSdk = 34
-
+    compileSdk = 36 
+    
     defaultConfig {
         applicationId = "com.techtedapps.geminichat"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36 
         versionCode = 1
         versionName = "1.0"
 
@@ -55,23 +51,20 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "2.0.21" 
     }
 
     packaging {
         resources {
             // Correct Kotlin DSL syntax for excluding files
-            // This fixes the 'Unresolved reference: excludes' error
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
 }
 
 dependencies {
-    // Dependency keywords like 'implementation' are now resolved due to the plugins block.
     
-    // Using contemporary versions for a modern Android/Compose app
-    val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
+    val composeBom = platform("androidx.compose:compose-bom:2025.08.00") 
     implementation(composeBom)
     
     // Generative AI SDK
@@ -81,13 +74,16 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.9.0")
+    
+    // Compose UI
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    
+    // ViewModels and Navigation
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.navigation:navigation-compose:2.7.7")
-
 
     // Test dependencies
     testImplementation("androidx.test.ext:junit:1.1.5")
