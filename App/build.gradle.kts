@@ -89,6 +89,13 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+
+ implementation("com.google.android.material:material:1.11.0") 
+    // You might also need the AppCompat library if your Activity still extends AppCompatActivity
+    implementation("androidx.appcompat:appcompat:1.6.1") 
+    
+    // ... rest of your dependencies
+}
     
     // ViewModels and Navigation
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
