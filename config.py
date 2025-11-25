@@ -1,7 +1,16 @@
 import os
 
+# Gemini API Key
+API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-MODEL_NAME = "gemini-2.5-flash"
+# ChromaDB Configuration
+CHROMA_HOST = "74.208.167.101"
+
+# Google Custom Search API Configuration
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "YOUR_GOOGLE_SEARCH_API_KEY")
+CUSTOM_SEARCH_CX = os.environ.get("CUSTOM_SEARCH_CX", "YOUR_CUSTOM_SEARCH_CX")
+
+MODEL_NAME = "gemini-1.5-flash"
 IMAGE_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "gemini_generated_images")
 
 SAFETY_SETTINGS = [
@@ -26,3 +35,6 @@ PROJECT_CONTEXT_IGNORE = [
 ]
 
 # VPS SSH Configuration
+VPS_IP = "74.208.167.101"
+VPS_USER = "user"
+VPS_SSH_KEY_PATH = "~/.ssh/id_rsa"

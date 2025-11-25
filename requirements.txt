@@ -1,0 +1,9 @@
+google-generativeai
+Pillow
+chromadb
+requests
+beautifulsoup4
+google-api-python-client
+uiautomator2
+prompt_toolkit
+rich

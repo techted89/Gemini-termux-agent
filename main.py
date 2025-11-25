@@ -12,10 +12,6 @@ import tui_agent
 
 
 def main():
-    if not config.API_KEY:
-        print("Error: API_KEY not set")
-        sys.exit(1)
-    genai.configure(api_key=config.API_KEY)
     parser = argparse.ArgumentParser()
     parser.add_argument("-A", "--agent", action="store_true")
     parser.add_argument("--tui", action="store_true")
@@ -38,6 +34,11 @@ def main():
     if args.tui:
         tui_agent.main()
         sys.exit(0)
+
+    if not config.API_KEY:
+        print("Error: API_KEY not set")
+        sys.exit(1)
+    genai.configure(api_key=config.API_KEY)
 
     try:
         def_model = genai.GenerativeModel(
