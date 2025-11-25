@@ -1,3 +1,5 @@
+import re
+
 def call_gemini_api(model, conversation_history, tools=None):
     """A simple, centralized wrapper for generate_content to handle errors."""
     if model is None:
@@ -68,7 +70,9 @@ def agentic_plan(prompt, model=None, tools=None):
     # Check if google_search is among the *declared* tools to include in the plan
     google_search_declared = False
     if tools:
-        for tool_spec in tools:
+        # Handle both dictionaries and lists of tools
+        tool_iterator = tools.values() if isinstance(tools, dict) else tools
+        for tool_spec in tool_iterator:
             if (
                 hasattr(tool_spec, "function_declarations")
                 and tool_spec.function_declarations
@@ -155,19 +159,14 @@ def agentic_execute(action, model=None, tools=None):
         or "search for" in action_lower
         or "look up" in action_lower
     ):
-        search_query = (
-            action_lower.replace("google search", "")
-            .replace("search for", "")
-            .replace("look up", "")
-            .strip()
-        )
+        search_query = action_lower.replace("google search for ", "").strip("'")
         execution_description_parts.append(
-            f"  - Initiated a Google search for: '{search_query if search_query else action}'. "
+            f"  - Initiated a Google search for: '{search_query}'. "
             "Expected results would include relevant web pages and documentation."
         )
     elif "read file" in action_lower or "read content of" in action_lower:
         filepath = (
-            action_lower.replace("read file", "").replace("read content of", "").strip()
+            action_lower.replace("read file", "").replace("read content of", "").strip().strip("'")
         )
         execution_description_parts.append(
             f"  - Attempted to read file: '{filepath if filepath else 'specified file'}'. "
