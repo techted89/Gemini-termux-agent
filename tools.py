@@ -10,9 +10,9 @@ import shlex
 import fnmatch
 import re
 import json
-
 import xml.etree.ElementTree as ET
 from googleapiclient.discovery import build
+from pypdf import PdfReader
 import config
 from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
 from db import learn_directory, learn_url, learn_file_content, search_and_delete_knowledge, search_and_delete_history, get_available_metadata_sources
@@ -41,6 +41,22 @@ def google_search(query):
         return "\n---\n".join(snippets)
     except Exception as e:
         return f"Error during search: {e}"
+
+def learn_pdf_task(filepath):
+    """
+    Loads a PDF, splits it into chunks, and learns the content of each chunk.
+    """
+    print(f"Tool: Running learn_pdf_task(filepath=\"{filepath}\")")
+    try:
+        reader = PdfReader(filepath)
+        for i, page in enumerate(reader.pages):
+            text = page.extract_text()
+            if text:
+                # Simple chunking by page
+                learn_file_content(filepath, content=text, metadata={"source": filepath, "page_number": i + 1})
+        return f"Successfully learned content from {len(reader.pages)} pages of {filepath}."
+    except Exception as e:
+        return f"Error learning PDF {filepath}: {e}"
 
 def learn_repo_task(repo_url):
     """Wrapper for learn_repo to be called by the agent."""
@@ -515,9 +531,7 @@ def droidrun_portal_adb_command(portal_path, action="query", data=None):
             # If parsing fails, return the raw text
             return result_text
     except Exception as e:
-
         return f"Error executing Droidrun-Portal ADB command: {e}"
- main
 
 # --- Hugging Face Tools ---
 
@@ -538,6 +552,28 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
     """
     print(f"Tool: Running huggingface_sentence_similarity(source='{source_sentence}', sentences_to_compare={len(sentences_to_compare)})")
 
+    if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
+        return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
+
+    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+    headers = {"Authorization": f"Bearer {config.HF_API_TOKEN}"}
+
+    payload = {
+        "inputs": {
+            "source_sentence": source_sentence,
+            "sentences": sentences_to_compare
+        }
+    }
+
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+        if response.status_code == 200:
+            scores = response.json()
+            return f"Similarity scores: {scores}"
+        else:
+            return f"Error from Hugging Face API: {response.status_code} - {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Error making request to Hugging Face API: {e}"
 
     if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
         return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
@@ -691,6 +727,7 @@ def execute_tool(call, models):
 
         # DB Tools
         if n == "learn_file_content": return learn_file_content(a["filepath"], a.get("content"))
+        if n == "learn_pdf_task": return learn_pdf_task(a["filepath"])
         if n == "learn_directory": return learn_directory(a["directory_path"], a.get("ignore_patterns"))
         if n == "learn_url": return learn_url(a["url"])
         if n == "search_and_delete_knowledge": return search_and_delete_knowledge(a.get("query"), a.get("source"), a.get("ids"), a.get("confirm"))
@@ -758,6 +795,7 @@ tool_definitions = {
     "git_branch": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="git_branch", description="Git Branch", parameters={"type": "object", "properties": {"new_branch_name": {"type": "string"}}, "required": []})]),
 
     "learn_file_content": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="learn_file_content", description="Learn File", parameters={"type": "object", "properties": {"filepath": {"type": "string"}}, "required": ["filepath"]})]),
+    "learn_pdf_task": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="learn_pdf_task", description="Learn from a PDF document.", parameters={"type": "object", "properties": {"filepath": {"type": "string"}}, "required": ["filepath"]})]),
     "learn_directory": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="learn_directory", description="Learn Dir", parameters={"type": "object", "properties": {"directory_path": {"type": "string"}, "ignore_patterns": {"type": "array", "items": {"type": "string"}}}, "required": ["directory_path"]})]),
     "learn_url": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="learn_url", description="Learn URL", parameters={"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]})]),
     "search_and_delete_knowledge": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="search_and_delete_knowledge", description="Search/Del Knowledge", parameters={"type": "object", "properties": {"query": {"type": "string"}, "source": {"type": "string"}, "ids": {"type": "array", "items": {"type": "string"}}, "confirm": {"type": "boolean"}}, "required": []})]),

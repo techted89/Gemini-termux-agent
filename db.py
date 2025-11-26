@@ -3,6 +3,9 @@ import sys
 import google.generativeai as genai
 from pathlib import Path
 import requests
+import uuid
+import time
+import numpy as np
 from bs4 import BeautifulSoup
 from config import PROJECT_CONTEXT_IGNORE, CHROMA_HOST
 
@@ -33,25 +36,37 @@ def get_embedding(text, task_type="RETRIEVAL_DOCUMENT"):
         return None
 
 
-def learn_file_content(filepath):
+def learn_file_content(filepath, content=None, metadata=None):
     try:
         p = Path(filepath)
-        if not p.is_file():
-            return
-        content = p.read_text(encoding="utf-8", errors="ignore")
+        if content is None:
+            if not p.is_file():
+                return
+            content = p.read_text(encoding="utf-8", errors="ignore")
+
         if len(content) > 15000 or not content.strip():
             return
+
         emb = get_embedding(content)
         if emb:
+            # Use provided metadata or create a default
+            meta = metadata or {"source": str(p.resolve())}
+            # Ensure 'source' is in meta
+            if "source" not in meta:
+                meta["source"] = str(p.resolve())
+
+            # Create a unique ID for each chunk, e.g., by combining path and a hash of content
+            chunk_id = f"{str(p.resolve())}_{hash(content)}"
+
             knowledge_collection.upsert(
                 embeddings=[emb],
                 documents=[content],
-                metadatas=[{"source": str(p.resolve())}],
-                ids=[str(p.resolve())],
+                metadatas=[meta],
+                ids=[chunk_id],
             )
             print(".", end="", flush=True)
-    except Exception: # Changed bare except to Exception
-        pass
+    except Exception as e:
+        print(f"Error learning file content for {filepath}: {e}")
 
 
 def learn_directory(directory_path):
@@ -84,44 +99,70 @@ def learn_url(url):
         print(f"Error learning URL {url}: {e}") # Enhanced error message
 
 
-def get_relevant_context(prompt, n_results=5, where_filter=None):
+def get_relevant_context(prompt, n_results=5, where_filter=None, lambda_mult=0.7):
     """
-    Retrieves relevant context from the knowledge base, with an optional metadata filter.
-
-    Args:
-        prompt (str): The user's query.
-        n_results (int, optional): The number of results to retrieve. Defaults to 5.
-        where_filter (dict, optional): A ChromaDB filter to apply to the search.
-                                      Example: {"source": "path/to/file.py"}
-
-    Returns:
-        str: A formatted string containing the relevant context, or an empty string.
+    Retrieves relevant and diverse context from the knowledge base using MMR.
     """
     try:
-        emb = get_embedding(prompt, task_type="RETRIEVAL_QUERY")
-        if not emb:
+        query_embedding = get_embedding(prompt, task_type="RETRIEVAL_QUERY")
+        if not query_embedding:
             return ""
 
+        # 1. Retrieve a larger pool of candidates
+        fetch_k = n_results * 4
         query_params = {
-            "query_embeddings": [emb],
-            "n_results": n_results
+            "query_embeddings": [query_embedding],
+            "n_results": fetch_k,
+            "include": ["metadatas", "documents", "embeddings"]
         }
         if where_filter:
             query_params["where"] = where_filter
 
-        res = knowledge_collection.query(**query_params)
+        results = knowledge_collection.query(**query_params)
 
-        if not res["documents"] or not res["documents"][0]:
+        if not results["documents"] or not results["documents"][0]:
             return ""
 
+        candidate_embeddings = np.array(results["embeddings"][0])
+        query_embedding = np.array(query_embedding)
+
+        # 2. Select the best match first
+        similarities = np.dot(candidate_embeddings, query_embedding)
+        best_match_idx = np.argmax(similarities)
+
+        selected_indices = [best_match_idx]
+        selected_embeddings = [candidate_embeddings[best_match_idx]]
+
+        # 3. Iteratively re-rank and select the rest
+        while len(selected_indices) < n_results:
+            mmr_scores = []
+            remaining_indices = [i for i in range(len(candidate_embeddings)) if i not in selected_indices]
+
+            for i in remaining_indices:
+                relevance = similarities[i]
+                max_similarity_to_selected = np.max(np.dot(selected_embeddings, candidate_embeddings[i]))
+                mmr_score = lambda_mult * relevance - (1 - lambda_mult) * max_similarity_to_selected
+                mmr_scores.append((mmr_score, i))
+
+            if not mmr_scores:
+                break
+
+            # Select the best MMR score and add to selected
+            best_mmr_idx = max(mmr_scores, key=lambda x: x[0])[1]
+            selected_indices.append(best_mmr_idx)
+            selected_embeddings.append(candidate_embeddings[best_mmr_idx])
+
+        # 4. Format the final context
         filter_str = f" with filter: {where_filter}" if where_filter else ""
         ctx = f"--- RELEVANT CONTEXT (Query: '{prompt}'{filter_str}) ---\n"
-        for i, doc in enumerate(res["documents"][0]):
-            source = res['metadatas'][0][i].get('source', 'Unknown') # Safely get source
-            ctx += f"Source: {source}\nContent: {doc[:500]}...\n\n"
+        for i in selected_indices:
+            source = results['metadatas'][0][i].get('source', 'Unknown')
+            ctx += f"Source: {source}\nContent: {results['documents'][0][i][:500]}...\n\n"
+
         return ctx
-    except Exception as e: # Changed bare except to Exception
-        print(f"Error retrieving context: {e}") # Added specific error logging
+
+    except Exception as e:
+        print(f"Error retrieving context with MMR: {e}")
         return ""
 
 def get_available_metadata_sources():
@@ -147,6 +188,59 @@ def get_available_metadata_sources():
 
     except Exception as e:
         return f"Error getting metadata sources: {e}"
+
+def store_conversation_turn(user_query, ai_response, user_id="default_user"):
+    """
+    Stores a single turn of the conversation in the history collection.
+    """
+    try:
+        doc_content = f"User: {user_query}\nAI: {ai_response}"
+        embedding = get_embedding(doc_content, task_type="RETRIEVAL_DOCUMENT")
+        if not embedding:
+            return
+
+        interaction_id = f"msg_{uuid.uuid4()}"
+        metadata = {
+            "user_id": user_id,
+            "session_id": "session_alpha",  # Placeholder for session management
+            "timestamp": int(time.time())
+        }
+
+        conversation_history_collection.upsert(
+            ids=[interaction_id],
+            embeddings=[embedding],
+            documents=[doc_content],
+            metadatas=[metadata]
+        )
+    except Exception as e:
+        print(f"Error storing conversation turn: {e}")
+
+def get_relevant_history(query, user_id, n_results=3):
+    """
+    Retrieves relevant conversation history for a given user.
+    """
+    try:
+        embedding = get_embedding(query, task_type="RETRIEVAL_QUERY")
+        if not embedding:
+            return ""
+
+        results = conversation_history_collection.query(
+            query_embeddings=[embedding],
+            n_results=n_results,
+            where={"user_id": user_id}
+        )
+
+        if not results["documents"] or not results["documents"][0]:
+            return ""
+
+        history_context = "--- RELEVANT PAST CONTEXT ---\n"
+        for doc in results["documents"][0]:
+            history_context += f"{doc}\n---\n"
+
+        return history_context
+    except Exception as e:
+        print(f"Error retrieving conversation history: {e}")
+        return ""
 
 def delete_knowledge(ids=None, where=None):
     """
