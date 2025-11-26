@@ -10,6 +10,9 @@ import shlex
 import fnmatch
 import re
 import json
+
+import xml.etree.ElementTree as ET
+main
 from googleapiclient.discovery import build
 import config
 from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
@@ -232,6 +235,162 @@ def android_ui_long_press_text(text, duration=1.0, timeout=10):
     except Exception as e:
         return f"Error long-pressing element by text: {e}"
 
+# --- Root-Based UI Automation Tools ---
+
+def tap_screen(x, y):
+    """
+    Simulates a screen tap at the specified coordinates using root privileges.
+
+    Args:
+        x (int): The x-coordinate of the tap location.
+        y (int): The y-coordinate of the tap location.
+
+    Returns:
+        str: The result of the command execution or an error message.
+    """
+    print(f"Tool: Running tap_screen(x={x}, y={y})")
+    cmd = f'su -c "input tap {x} {y}"'
+    if user_confirm(f"Execute root command: {cmd}?"):
+        try:
+            return run_command(cmd, shell=True, check_output=True) or f"Tapped screen at ({x}, {y})."
+        except Exception as e:
+            return f"Error tapping screen: {e}"
+    return "Denied by user."
+
+def swipe_screen(x1, y1, x2, y2, duration_ms=300):
+    """
+    Simulates a swipe gesture on the screen using root privileges.
+
+    Args:
+        x1 (int): The starting x-coordinate of the swipe.
+        y1 (int): The starting y-coordinate of the swipe.
+        x2 (int): The ending x-coordinate of the swipe.
+        y2 (int): The ending y-coordinate of the swipe.
+        duration_ms (int, optional): The duration of the swipe in milliseconds. Defaults to 300.
+
+    Returns:
+        str: The result of the command execution or an error message.
+    """
+    print(f"Tool: Running swipe_screen(from=({x1}, {y1}), to=({x2}, {y2}), duration={duration_ms}ms)")
+    cmd = f'su -c "input swipe {x1} {y1} {x2} {y2} {duration_ms}"'
+    if user_confirm(f"Execute root command: {cmd}?"):
+        try:
+            return run_command(cmd, shell=True, check_output=True) or f"Swiped screen from ({x1}, {y1}) to ({x2}, {y2})."
+        except Exception as e:
+            return f"Error swiping screen: {e}"
+    return "Denied by user."
+
+def input_text(text):
+    """
+    Inputs the given text into the current input field using root privileges.
+
+    Args:
+        text (str): The text to be inputted.
+
+    Returns:
+        str: The result of the command execution or an error message.
+    """
+    print(f"Tool: Running input_text(text=\"{text}\")")
+    # Note: shlex.quote is crucial here to handle spaces and special characters safely.
+    cmd = f'su -c "input text {shlex.quote(text)}"'
+    if user_confirm(f"Execute root command: {cmd}?"):
+        try:
+            return run_command(cmd, shell=True, check_output=True) or f"Inputted text: '{text}'."
+        except Exception as e:
+            return f"Error inputting text: {e}"
+    return "Denied by user."
+
+def get_screen_analysis(output_path="/sdcard/Pictures/screen_analysis.png"):
+    """
+    Captures the screen and UI XML hierarchy for analysis.
+
+    This tool provides a comprehensive snapshot of the current UI state by:
+    1.  Taking a screenshot of the device.
+    2.  Dumping the UI's XML layout.
+
+    Args:
+        output_path (str, optional): The path to save the screenshot and XML dump.
+            The XML file will have the same name with a '.xml' extension.
+            Defaults to "/sdcard/Pictures/screen_analysis.png".
+
+    Returns:
+        str: A message containing the path to the screenshot and the UI XML content,
+             or an error message if the commands fail.
+    """
+    print(f"Tool: Running get_screen_analysis(output_path=\"{output_path}\")")
+    xml_output_path = os.path.splitext(output_path)[0] + ".xml"
+
+    # Define the root commands
+    screencap_cmd = f'su -c "screencap -p {shlex.quote(output_path)}"'
+    uiautomator_cmd = f'su -c "uiautomator dump {shlex.quote(xml_output_path)}"'
+
+    if not user_confirm("Proceed with screen capture and UI dump?"):
+        return "Denied by user."
+
+    try:
+        # Execute screen capture
+        run_command(screencap_cmd, shell=True, check_output=True)
+        # Execute UI dump
+        run_command(uiautomator_cmd, shell=True, check_output=True)
+
+        # Read the XML content
+        with open(xml_output_path, "r") as f:
+            xml_content = f.read()
+
+        return f"Screen captured at '{output_path}'.\nUI XML content:\n{xml_content}"
+
+    except Exception as e:
+        return f"Error during screen analysis: {e}"
+
+def extract_text_from_screen():
+    """
+    Extracts all text from the current screen by parsing the UI XML hierarchy.
+
+    This tool is useful for reading the content of the screen without needing OCR.
+    It calls `get_screen_analysis` to get the UI dump and then extracts the 'text'
+    attribute from each node in the XML tree.
+
+    Returns:
+        list[str]: A list of all non-empty text strings found on the screen.
+    """
+    print("Tool: Running extract_text_from_screen()")
+
+    # Use a temporary file for the analysis to avoid overwriting user files
+    temp_dir = tempfile.gettempdir()
+    analysis_path = os.path.join(temp_dir, "screen_analysis.png")
+
+    # Get the screen analysis (screenshot and XML)
+    analysis_result = get_screen_analysis(output_path=analysis_path)
+
+    if "Error" in analysis_result:
+        return f"Error getting screen analysis: {analysis_result}"
+
+    xml_output_path = os.path.splitext(analysis_path)[0] + ".xml"
+
+    try:
+        # Parse the XML file
+        tree = ET.parse(xml_output_path)
+        root = tree.getroot()
+
+        texts = []
+        for node in root.iter():
+            text = node.get("text")
+            if text and text.strip():
+                texts.append(text.strip())
+
+        return texts if texts else "No text found on the screen."
+
+    except ET.ParseError as e:
+        return f"Error parsing UI XML: {e}"
+    except Exception as e:
+        return f"An unexpected error occurred during text extraction: {e}"
+    finally:
+        # Clean up the temporary files
+        if os.path.exists(analysis_path):
+            os.remove(analysis_path)
+        if os.path.exists(xml_output_path):
+            os.remove(xml_output_path)
+
 # --- Browser Automation Tools (Puppeteer) ---
 def execute_puppeteer_script(url, action="screenshot", output_file="screenshot.png"):
     """
@@ -428,6 +587,13 @@ def execute_tool(call, models):
         if n == "android_ui_find_and_tap_text": return android_ui_find_and_tap_text(a["text"], a.get("timeout", 10))
         if n == "android_ui_long_press_text": return android_ui_long_press_text(a["text"], a.get("duration", 1.0), a.get("timeout", 10))
 
+        # Root-Based UI Automation Tools
+        if n == "tap_screen": return tap_screen(a["x"], a["y"])
+        if n == "swipe_screen": return swipe_screen(a["x1"], a["y1"], a["x2"], a["y2"], a.get("duration_ms", 300))
+        if n == "input_text": return input_text(a["text"])
+        if n == "get_screen_analysis": return get_screen_analysis(a.get("output_path", "/sdcard/Pictures/screen_analysis.png"))
+        if n == "extract_text_from_screen": return extract_text_from_screen()
+
         # Browser Automation Tools (Puppeteer)
         if n == "execute_puppeteer_script": return execute_puppeteer_script(a["url"], a.get("action", "screenshot"), a.get("output_file", "screenshot.png"))
 
@@ -498,6 +664,12 @@ tool_definitions = {
     "open_gemini_app": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="open_gemini_app", description="Opens the Gemini app using uiautomator2. Requires uiautomator2 library and atx-agent to be installed and running.", parameters={"type": "object", "properties": {"package_name": {"type": "string"}}, "required": []})]),
     "android_ui_find_and_tap_text": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="android_ui_find_and_tap_text", description="Finds a UI element by text and taps it.", parameters={"type": "object", "properties": {"text": {"type": "string"}, "timeout": {"type": "number", "format": "float"}}, "required": ["text"]})]),
     "android_ui_long_press_text": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="android_ui_long_press_text", description="Finds a UI element by text and performs a long press on it.", parameters={"type": "object", "properties": {"text": {"type": "string"}, "duration": {"type": "number", "format": "float"}, "timeout": {"type": "number", "format": "float"}}, "required": ["text"]})]),
+
+    "tap_screen": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="tap_screen", description="Taps the screen at given coordinates.", parameters={"type": "object", "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}, "required": ["x", "y"]})]),
+    "swipe_screen": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="swipe_screen", description="Swipes on the screen.", parameters={"type": "object", "properties": {"x1": {"type": "integer"}, "y1": {"type": "integer"}, "x2": {"type": "integer"}, "y2": {"type": "integer"}, "duration_ms": {"type": "integer"}}, "required": ["x1", "y1", "x2", "y2"]})]),
+    "input_text": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="input_text", description="Inputs text.", parameters={"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})]),
+    "get_screen_analysis": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="get_screen_analysis", description="Captures screen and UI XML.", parameters={"type": "object", "properties": {"output_path": {"type": "string"}}, "required": []})]),
+    "extract_text_from_screen": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="extract_text_from_screen", description="Extracts all text from the screen.", parameters={"type": "object", "properties": {}})]),
 
     "execute_puppeteer_script": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="execute_puppeteer_script", description="Executes a Puppeteer script for browser automation (screenshot, get_html).", parameters={"type": "object", "properties": {"url": {"type": "string"}, "action": {"type": "string"}, "output_file": {"type": "string"}}, "required": ["url"]})]),
 
