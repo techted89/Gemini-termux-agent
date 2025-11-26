@@ -2,6 +2,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+AUTO_CONFIRM = False
+
 
 def run_command(command, shell=False, check_output=False, ignore_errors=False):
     """Runs a shell command. Supports capturing output via check_output=True."""
@@ -35,6 +37,8 @@ def run_command(command, shell=False, check_output=False, ignore_errors=False):
 
 def user_confirm(question):
     """Asks the user for a yes/no confirmation."""
+    if AUTO_CONFIRM:
+        return True
     while True:
         try:
             # Use print with end='' to ensure prompt appears before input wait

@@ -1,124 +1,58 @@
-from api import call_gemini_api
+from api import agentic_reason_and_act
 from tools import tool_definitions, execute_tool
-from db import get_relevant_context # Import the function
-
-def run_agent_step(
-    models, history, user_input=None, print_func=print, verbose_mode=False
-):
-    """
-    Executes a single step of the agent's turn.
-    Returns (done, result_text, metadata).
-    - done: True if the agent has finished processing (either responded with text or error), False if it made a tool call and needs to process the result.
-    - result_text: The text output to be displayed to the user.
-    - metadata: (Currently None, but can be used for more complex state/data in the future).
-    """
-    if user_input:
-        # Retrieve relevant context from ChromaDB
-        relevant_context = get_relevant_context(user_input)
-        
-        # Prepend the context to the user input
-        if relevant_context:
-            user_input = f"{relevant_context}\n{user_input}"
-        
-        history.append({"role": "user", "parts": [user_input]})
-
-    try:
-        response = call_gemini_api(
-            models["tools"], history, tools=list(tool_definitions.values())
-        )
-
-        function_call, text_content = None, ""
-        if response.parts:
-            for part in response.parts:
-                if hasattr(part, "function_call") and part.function_call:
-                    function_call = part.function_call
-                text_val = getattr(part, "text", None)
-                if text_val:
-                    text_content += text_val
-
-        if function_call:
-            # Add model's thought/call to history
-            history.append({"role": "model", "parts": response.parts})
-
-            if text_content and verbose_mode:
-                print_func(f"🤖 {text_content}")
-
-            # Execute tool
-            print_func(f"⚙️ Tool: {function_call.name}")
-            # Note: The `execute_tool` function might need the `models` dictionary
-            # if tools themselves require access to different model configurations.
-            tool_result = execute_tool(function_call, models)  # SYNC CALL
-
-            # Add result to history
-            history.append(
-                {
-                    "role": "function",
-                    "parts": [
-                        {
-                            "function_response": {
-                                "name": function_call.name,
-                                "response": {"result": str(tool_result)},
-                            }
-                        }
-                    ],
-                }
-            )
-            print_func(
-                f"✅ Result: {str(tool_result)[:100]}..."
-            )  # Truncate for display
-            return False, None, None  # Not done, as it needs to process the tool result
-
-        elif text_content:
-            history.append({"role": "model", "parts": [text_content]})
-            return True, text_content, None  # Done, responded with text
-
-        return (
-            True,
-            "⚠️ Agent returned empty response.",
-            None,
-        )  # Done, but with an empty response
-
-    except Exception as e:
-        return True, f"🔥 Error: {e}", None  # Done, due to an error
-
+from db import store_conversation_turn
 
 def handle_agent_task(models, initial_prompt, initial_context):
     """
-    Handles a full agent task in a CLI loop.
-    This replaces the previous handle_agent_task and process_agent_turn functions.
+    Manages the agent's workflow for a single, non-interactive task.
     """
-    print("🤖 Agent mode. Type 'exit' to quit.")
+    print("🤖 Agent started. Type 'exit' to quit.")
+    user_id = "default_user"
 
-    # Initialize history with the system prompt
-    sys_prompt = f"You are a Termux AI Agent. Goal: {initial_prompt}"
-    hist = [*initial_context, {"role": "user", "parts": [sys_prompt]}]
+    sys_prompt = f"""Your goal is to: {initial_prompt}.
 
-    # Initial kick-off for the agent to start working on the goal
-    done = False
-    while not done:
-        done, res, _ = run_agent_step(models, hist)
-        if res:
-            print(f"🤖 {res}")
+You must structure your response in three parts: Thought, Plan, and Action.
 
-    # Main loop for user interaction and continued agent processing
-    while True:
+**Thought:** First, analyze the user's query and the available context. Break down the problem and consider which tools might be useful. If you need to search for information, decide if you can narrow down the search using a filter.
+
+**Plan:** Second, create a clear, step-by-step plan for how you will address the query. Your plan should be detailed enough for another agent to follow.
+
+**Action:** Third, specify the action you will take. This must be either:
+1. A single, valid tool call from the available tools.
+2. The final, user-facing answer if no tool is needed.
+
+When retrieving information, use this workflow:
+1.  **Thought:** "I need to find information about X. Can I narrow down my search?"
+2.  **Plan:** "1. Use `get_available_metadata_sources` to see what filters are available. 2. Use `get_relevant_context` with a `where_filter` to perform a targeted search."
+3.  **Action:** `get_available_metadata_sources()`
+"""
+    history = [*initial_context, {"role": "user", "parts": [sys_prompt]}]
+
+    # Agent execution loop
+    for _ in range(10):  # Safety break after 10 iterations
         try:
-            user_input = input("You: ")
-            if user_input.lower() in ["exit", "quit"]:
-                break
+            thought, function_call = agentic_reason_and_act(
+                models["tools"], history, tools=list(tool_definitions.values())
+            )
+            print(f"🤔 Thought: {thought}")
 
-            # Process user input
-            done, res, _ = run_agent_step(models, hist, user_input=user_input)
-            if res:
-                print(f"🤖 {res}")
+            if function_call:
+                history.append({"role": "model", "parts": [{"function_call": function_call}]})
+                print(f"🛠️ Tool call: {function_call.name}")
+                tool_result = execute_tool(function_call, models)
+                history.append({"role": "function", "parts": [{"function_response": {"name": function_call.name, "response": {"result": str(tool_result)}}}]})
+                print(f"✅ Result: {str(tool_result)[:200]}...")
+                continue
+            else:
+                final_response = thought
+                history.append({"role": "model", "parts": [final_response]})
+                print(f"🤖: {final_response}")
+                store_conversation_turn(initial_prompt, final_response, user_id)
+                return  # Exit successfully
 
-            # Continue agent processing until it's "done" (either responded or errored)
-            while not done:
-                done, res, _ = run_agent_step(models, hist)
-                if res:
-                    print(f"🤖 {res}")
-        except KeyboardInterrupt:
-            break
         except Exception as e:
-            print(f"🔥 An error occurred during user interaction: {e}")
-            break
+            error_message = f"🔥 An error occurred: {e}"
+            print(error_message)
+            return  # Exit on error
+
+    print("🚫 Agent reached maximum loop limit.")

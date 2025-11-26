@@ -8,13 +8,12 @@ import db
 from agent import handle_agent_task
 from api import call_gemini_api
 from tools import tool_definitions, learn_repo_task
-import tui_agent
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-y", "--yes", action="store_true", help="Auto-confirm all prompts")
     parser.add_argument("-A", "--agent", action="store_true")
-    parser.add_argument("--tui", action="store_true")
     parser.add_argument("--learn")
     parser.add_argument("-r", "--read", action="append")
     parser.add_argument("prompt", nargs="*")
@@ -31,9 +30,9 @@ def main():
     args = parser.parse_args()
     prompt = " ".join(args.prompt)
 
-    if args.tui:
-        tui_agent.main()
-        sys.exit(0)
+    if args.yes:
+        import helpers
+        helpers.AUTO_CONFIRM = True
 
     if not config.API_KEY:
         print("Error: API_KEY not set")
@@ -99,10 +98,7 @@ def main():
             models["default"], args.edit, prompt, conversation_history=ctx
         )
     elif prompt:
-        ctx.append({"role": "user", "parts": [db.get_relevant_context(prompt)]})
-        ctx.append({"role": "user", "parts": [prompt]})
-        res = call_gemini_api(models["default"], ctx)
-        print(res.text)
+        handle_agent_task(models, prompt, ctx)
     else:
         parser.print_help()
 
