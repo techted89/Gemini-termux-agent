@@ -1,21 +1,34 @@
 from api import agentic_reason_and_act
 from tools import tool_definitions, execute_tool
+
 from db import get_relevant_context, get_available_metadata_sources
+
+from db import get_relevant_context
+ main
 
 def run_agent_step(models, history, user_input=None, print_func=print):
     """
     Executes one step of the agent's reasoning loop.
     """
     if user_input:
+
         # 1. Append user input to history. The context retrieval is now part of the agent's
         #    reasoning process, so we no longer pre-fetch it here.
+
+        # 1. Append user input to history
+        relevant_context = get_relevant_context(user_input)
+        if relevant_context:
+            user_input = f"Relevant context:\n{relevant_context}\n\nUser query: {user_input}"
+ main
         history.append({"role": "user", "parts": [user_input]})
 
     try:
         # 2. Get the agent's thought and next action
+
         #    The `agentic_reason_and_act` function is where the agent decides
         #    whether to call a tool (like `get_relevant_context` with a filter)
         #    or to respond directly.
+ main
         thought, function_call = agentic_reason_and_act(
             models["tools"], history, tools=list(tool_definitions.values())
         )
@@ -33,8 +46,10 @@ def run_agent_step(models, history, user_input=None, print_func=print):
             )
             print_func(f"🛠️ Tool call: {function_call.name}")
 
+
             # The agent is now responsible for calling `get_relevant_context`
             # with or without a `where_filter` as part of its tool execution.
+ main
             tool_result = execute_tool(function_call, models)
 
             history.append(
@@ -71,6 +86,7 @@ def handle_agent_task(models, initial_prompt, initial_context):
     """
     print("🤖 Agent started. Type 'exit' to quit.")
 
+
     # 1. Initialize conversation history with a more detailed system prompt
     #    that encourages the use of filtering.
     sys_prompt = f"""Your goal is to: {initial_prompt}.
@@ -86,6 +102,17 @@ def handle_agent_task(models, initial_prompt, initial_context):
     if response:
         print(f"🤖: {response}")
 
+
+    # 1. Initialize conversation history
+    sys_prompt = f"Your goal is to: {initial_prompt}"
+    history = [*initial_context, {"role": "user", "parts": [sys_prompt]}]
+
+    # 2. Kick-off the agent's first step
+    done, response = run_agent_step(models, history, print_func=print)
+    if response:
+        print(f"🤖: {response}")
+
+ main
     # 3. Main loop for the agent's execution
     while True:
         try:

@@ -10,6 +10,7 @@ import shlex
 import fnmatch
 import re
 import json
+
 import xml.etree.ElementTree as ET
 from googleapiclient.discovery import build
 import config
@@ -514,7 +515,9 @@ def droidrun_portal_adb_command(portal_path, action="query", data=None):
             # If parsing fails, return the raw text
             return result_text
     except Exception as e:
+
         return f"Error executing Droidrun-Portal ADB command: {e}"
+ main
 
 # --- Hugging Face Tools ---
 
@@ -534,6 +537,7 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
                      in the `sentences_to_compare` list. Returns an error message on failure.
     """
     print(f"Tool: Running huggingface_sentence_similarity(source='{source_sentence}', sentences_to_compare={len(sentences_to_compare)})")
+
 
     if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
         return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
@@ -557,7 +561,31 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
             return f"Error from Hugging Face API: {response.status_code} - {response.text}"
     except requests.exceptions.RequestException as e:
         return f"Error making request to Hugging Face API: {e}"
+      
+      main
 
+    if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
+        return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
+
+    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+    headers = {"Authorization": f"Bearer {config.HF_API_TOKEN}"}
+
+    payload = {
+        "inputs": {
+            "source_sentence": source_sentence,
+            "sentences": sentences_to_compare
+        }
+    }
+
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+        if response.status_code == 200:
+            scores = response.json()
+            return f"Similarity scores: {scores}"
+        else:
+            return f"Error from Hugging Face API: {response.status_code} - {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Error making request to Hugging Face API: {e}"
 # --- CM Tools ---
 def execute_cm_command(cm_command):
     """Executes a Collective Mind (CM) command."""
