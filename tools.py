@@ -10,7 +10,9 @@ import shlex
 import fnmatch
 import re
 import json
+
 import xml.etree.ElementTree as ET
+main
 from googleapiclient.discovery import build
 import config
 from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
