@@ -10,7 +10,13 @@ import shlex
 import fnmatch
 import re
 import json
+
 import xml.etree.ElementTree as ET
+
+
+import xml.etree.ElementTree as ET
+main
+ main
 from googleapiclient.discovery import build
 import config
 from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
@@ -514,7 +520,7 @@ def droidrun_portal_adb_command(portal_path, action="query", data=None):
             # If parsing fails, return the raw text
             return result_text
     except Exception as e:
-        return f"Error executing Droidrun-Portal ADB command: {e}"
+        return f"Error executing Droidrun-Portal ADB command: {e}
 
 # --- Hugging Face Tools ---
 
@@ -557,7 +563,6 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
             return f"Error from Hugging Face API: {response.status_code} - {response.text}"
     except requests.exceptions.RequestException as e:
         return f"Error making request to Hugging Face API: {e}"
-
 # --- CM Tools ---
 def execute_cm_command(cm_command):
     """Executes a Collective Mind (CM) command."""
