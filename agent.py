@@ -1,124 +1,94 @@
-from api import call_gemini_api
+from api import agentic_reason_and_act, call_gemini_api
 from tools import tool_definitions, execute_tool
-from db import get_relevant_context # Import the function
+from db import get_relevant_context, get_available_metadata_sources, store_conversation_turn, get_relevant_history
 
-def run_agent_step(
-    models, history, user_input=None, print_func=print, verbose_mode=False
-):
+def run_agent_step(models, history, user_id, user_input=None, print_func=print):
     """
-    Executes a single step of the agent's turn.
-    Returns (done, result_text, metadata).
-    - done: True if the agent has finished processing (either responded with text or error), False if it made a tool call and needs to process the result.
-    - result_text: The text output to be displayed to the user.
-    - metadata: (Currently None, but can be used for more complex state/data in the future).
+    Executes one step of the agent's reasoning loop.
     """
     if user_input:
-        # Retrieve relevant context from ChromaDB
-        relevant_context = get_relevant_context(user_input)
+        # 1. Contextualize the user's query
+        contextualize_prompt = f"""Based on the last few turns of the conversation, rewrite the user's latest query: '{user_input}'
+                                 into a standalone question.
+
+                                 CONVERSATION HISTORY:
+                                 {''.join([f'{turn["role"]}: {turn["parts"][0]}\n' for turn in history[-3:]])}
+
+                                 STANDALONE QUESTION:"""
         
-        # Prepend the context to the user input
-        if relevant_context:
-            user_input = f"{relevant_context}\n{user_input}"
+        standalone_question = call_gemini_api(models["default"], [{"role": "user", "parts": [contextualize_prompt]}]).text.strip()
+        print_func(f"🔎 Standalone Question: {standalone_question}")
+
+        # 2. Retrieve relevant history
+        history_context = get_relevant_history(standalone_question, user_id)
         
-        history.append({"role": "user", "parts": [user_input]})
+        # 3. Inject context and append to history
+        final_input = f"{history_context}\nUser query: {standalone_question}"
+        history.append({"role": "user", "parts": [final_input]})
 
     try:
-        response = call_gemini_api(
+        thought, function_call = agentic_reason_and_act(
             models["tools"], history, tools=list(tool_definitions.values())
         )
-
-        function_call, text_content = None, ""
-        if response.parts:
-            for part in response.parts:
-                if hasattr(part, "function_call") and part.function_call:
-                    function_call = part.function_call
-                text_val = getattr(part, "text", None)
-                if text_val:
-                    text_content += text_val
+        print_func(f"🤔 Thought: {thought}")
 
         if function_call:
-            # Add model's thought/call to history
-            history.append({"role": "model", "parts": response.parts})
-
-            if text_content and verbose_mode:
-                print_func(f"🤖 {text_content}")
-
-            # Execute tool
-            print_func(f"⚙️ Tool: {function_call.name}")
-            # Note: The `execute_tool` function might need the `models` dictionary
-            # if tools themselves require access to different model configurations.
-            tool_result = execute_tool(function_call, models)  # SYNC CALL
-
-            # Add result to history
-            history.append(
-                {
-                    "role": "function",
-                    "parts": [
-                        {
-                            "function_response": {
-                                "name": function_call.name,
-                                "response": {"result": str(tool_result)},
-                            }
-                        }
-                    ],
-                }
-            )
-            print_func(
-                f"✅ Result: {str(tool_result)[:100]}..."
-            )  # Truncate for display
-            return False, None, None  # Not done, as it needs to process the tool result
-
-        elif text_content:
-            history.append({"role": "model", "parts": [text_content]})
-            return True, text_content, None  # Done, responded with text
-
-        return (
-            True,
-            "⚠️ Agent returned empty response.",
-            None,
-        )  # Done, but with an empty response
+            history.append({"role": "model", "parts": [{"function_call": function_call}]})
+            print_func(f"🛠️ Tool call: {function_call.name}")
+            tool_result = execute_tool(function_call, models)
+            history.append({"role": "function", "parts": [{"function_response": {"name": function_call.name, "response": {"result": str(tool_result)}}}]})
+            print_func(f"✅ Result: {str(tool_result)[:200]}...")
+            return False, None, user_input  # Return the original user_input
+        else:
+            final_response = thought
+            history.append({"role": "model", "parts": [final_response]})
+            # Store the conversation turn
+            if user_input:
+                store_conversation_turn(user_input, final_response, user_id)
+            return True, final_response, None
 
     except Exception as e:
-        return True, f"🔥 Error: {e}", None  # Done, due to an error
-
+        error_message = f"🔥 An error occurred: {e}"
+        print_func(error_message)
+        return True, error_message, None
 
 def handle_agent_task(models, initial_prompt, initial_context):
     """
-    Handles a full agent task in a CLI loop.
-    This replaces the previous handle_agent_task and process_agent_turn functions.
+    Manages the agent's workflow for a given task.
     """
-    print("🤖 Agent mode. Type 'exit' to quit.")
+    print("🤖 Agent started. Type 'exit' to quit.")
+    user_id = "default_user"  # In a real app, this would be dynamic
 
-    # Initialize history with the system prompt
-    sys_prompt = f"You are a Termux AI Agent. Goal: {initial_prompt}"
-    hist = [*initial_context, {"role": "user", "parts": [sys_prompt]}]
+    sys_prompt = f"""Your goal is to: {initial_prompt}.
+    When you need to retrieve information, first consider if you can narrow down your search.
+    Use the `get_available_metadata_sources` tool to see what sources you can filter by.
+    Then, use the `get_relevant_context` tool with a `where_filter` to perform a targeted search.
+    """
+    history = [*initial_context, {"role": "user", "parts": [sys_prompt]}]
 
-    # Initial kick-off for the agent to start working on the goal
-    done = False
-    while not done:
-        done, res, _ = run_agent_step(models, hist)
-        if res:
-            print(f"🤖 {res}")
+    done, response, last_user_input = run_agent_step(models, history, user_id, print_func=print)
+    if response:
+        print(f"🤖: {response}")
 
-    # Main loop for user interaction and continued agent processing
     while True:
         try:
-            user_input = input("You: ")
-            if user_input.lower() in ["exit", "quit"]:
-                break
+            if done:
+                user_input = input("🧑‍💻 You: ")
+                if user_input.lower() in ["exit", "quit"]:
+                    break
+                done, response, last_user_input = run_agent_step(models, history, user_id, user_input=user_input, print_func=print)
+            else:
+                done, response, _ = run_agent_step(models, history, user_id, print_func=print)
 
-            # Process user input
-            done, res, _ = run_agent_step(models, hist, user_input=user_input)
-            if res:
-                print(f"🤖 {res}")
+            if response:
+                print(f"🤖: {response}")
+                # If a final response was given after a tool call, store the turn
+                if last_user_input:
+                    store_conversation_turn(last_user_input, response, user_id)
 
-            # Continue agent processing until it's "done" (either responded or errored)
-            while not done:
-                done, res, _ = run_agent_step(models, hist)
-                if res:
-                    print(f"🤖 {res}")
         except KeyboardInterrupt:
+            print("\n👋 Agent stopped by user.")
             break
         except Exception as e:
-            print(f"🔥 An error occurred during user interaction: {e}")
+            print(f"🔥 A critical error occurred: {e}")
             break
