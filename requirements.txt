@@ -1,9 +1,9 @@
 google-generativeai
-Pillow
-chromadb
-requests
 beautifulsoup4
-google-api-python-client
-uiautomator2
+chromadb
+pypdf
+numpy
+python-dotenv
+Pillow
 prompt_toolkit
-rich
+requests
