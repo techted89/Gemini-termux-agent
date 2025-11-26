@@ -12,7 +12,11 @@ import re
 import json
 
 import xml.etree.ElementTree as ET
+
+
+import xml.etree.ElementTree as ET
 main
+ main
 from googleapiclient.discovery import build
 import config
 from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
@@ -516,8 +520,49 @@ def droidrun_portal_adb_command(portal_path, action="query", data=None):
             # If parsing fails, return the raw text
             return result_text
     except Exception as e:
-        return f"Error executing Droidrun-Portal ADB command: {e}"
+        return f"Error executing Droidrun-Portal ADB command: {e}
 
+# --- Hugging Face Tools ---
+
+def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
+    """
+    Calculates sentence similarity using the Hugging Face Inference API.
+
+    This tool is useful for understanding the semantic relationship between sentences,
+    which can be used for tasks like finding the most relevant piece of text.
+
+    Args:
+        source_sentence (str): The main sentence to compare against.
+        sentences_to_compare (list[str]): A list of sentences to compare with the source.
+
+    Returns:
+        list[float]: A list of similarity scores, each corresponding to a sentence
+                     in the `sentences_to_compare` list. Returns an error message on failure.
+    """
+    print(f"Tool: Running huggingface_sentence_similarity(source='{source_sentence}', sentences_to_compare={len(sentences_to_compare)})")
+
+    if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
+        return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
+
+    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+    headers = {"Authorization": f"Bearer {config.HF_API_TOKEN}"}
+
+    payload = {
+        "inputs": {
+            "source_sentence": source_sentence,
+            "sentences": sentences_to_compare
+        }
+    }
+
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+        if response.status_code == 200:
+            scores = response.json()
+            return f"Similarity scores: {scores}"
+        else:
+            return f"Error from Hugging Face API: {response.status_code} - {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Error making request to Hugging Face API: {e}"
 # --- CM Tools ---
 def execute_cm_command(cm_command):
     """Executes a Collective Mind (CM) command."""
@@ -601,6 +646,9 @@ def execute_tool(call, models):
         if n == "execute_droidrun_command": return execute_droidrun_command(a["command"])
         if n == "droidrun_portal_adb_command": return droidrun_portal_adb_command(a["portal_path"], a.get("action", "query"), a.get("data"))
 
+        # Hugging Face Tools
+        if n == "huggingface_sentence_similarity": return huggingface_sentence_similarity(a["source_sentence"], a["sentences_to_compare"])
+
         # CM Tools
         if n == "execute_cm_command": return execute_cm_command(a["cm_command"])
 
@@ -675,6 +723,8 @@ tool_definitions = {
 
     "execute_droidrun_command": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="execute_droidrun_command", description="Executes a Droidrun CLI command.", parameters={"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]})]),
     "droidrun_portal_adb_command": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="droidrun_portal_adb_command", description="Interacts with Droidrun-Portal via ADB commands.", parameters={"type": "object", "properties": {"portal_path": {"type": "string"}, "action": {"type": "string"}, "data": {"type": "object"}}, "required": ["portal_path"]})]),
+
+    "huggingface_sentence_similarity": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="huggingface_sentence_similarity", description="Calculates sentence similarity using the Hugging Face Inference API.", parameters={"type": "object", "properties": {"source_sentence": {"type": "string"}, "sentences_to_compare": {"type": "array", "items": {"type": "string"}}}, "required": ["source_sentence", "sentences_to_compare"]})]),
 
     "execute_cm_command": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="execute_cm_command", description="Executes a Collective Mind (CM) command.", parameters={"type": "object", "properties": {"cm_command": {"type": "string"}}, "required": ["cm_command"]})]),
 
