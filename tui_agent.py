@@ -42,7 +42,7 @@ def main(initial_agent_prompt=None):
     if initial_agent_prompt:
         history.append({"role": "user", "parts": [initial_agent_prompt]})
         # Initial run to kick-start the agent
-        done, response, _ = run_agent_step(models, history, user_id, print_func=tui_print_func)
+        done, response = run_agent_step(models, history, print_func=tui_print_func)
         if response:
             console.print(Markdown(response))
     else:
