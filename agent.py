@@ -3,15 +3,6 @@ from tools import tool_definitions, execute_tool
 from db import get_relevant_context, get_available_metadata_sources, store_conversation_turn, get_relevant_history
 
 def run_agent_step(models, history, user_id, user_input=None, print_func=print):
-from api import agentic_reason_and_act
-from tools import tool_definitions, execute_tool
-
-from db import get_relevant_context, get_available_metadata_sources
-
-from db import get_relevant_context
- main
-
-def run_agent_step(models, history, user_input=None, print_func=print):
     """
     Executes one step of the agent's reasoning loop.
     """
