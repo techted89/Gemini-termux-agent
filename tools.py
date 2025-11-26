@@ -12,15 +12,10 @@ import re
 import json
 
 import xml.etree.ElementTree as ET
-
-
-import xml.etree.ElementTree as ET
-main
- main
 from googleapiclient.discovery import build
 import config
 from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
-from db import learn_directory, learn_url, learn_file_content, search_and_delete_knowledge, search_and_delete_history
+from db import learn_directory, learn_url, learn_file_content, search_and_delete_knowledge, search_and_delete_history, get_available_metadata_sources
 from helpers import run_command, user_confirm, save_to_file
 
 # Assume uiautomator2 is a Python library available in the Termux environment
@@ -520,7 +515,9 @@ def droidrun_portal_adb_command(portal_path, action="query", data=None):
             # If parsing fails, return the raw text
             return result_text
     except Exception as e:
-        return f"Error executing Droidrun-Portal ADB command: {e}
+
+        return f"Error executing Droidrun-Portal ADB command: {e}"
+ main
 
 # --- Hugging Face Tools ---
 
@@ -540,6 +537,32 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
                      in the `sentences_to_compare` list. Returns an error message on failure.
     """
     print(f"Tool: Running huggingface_sentence_similarity(source='{source_sentence}', sentences_to_compare={len(sentences_to_compare)})")
+
+
+    if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
+        return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
+
+    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+    headers = {"Authorization": f"Bearer {config.HF_API_TOKEN}"}
+
+    payload = {
+        "inputs": {
+            "source_sentence": source_sentence,
+            "sentences": sentences_to_compare
+        }
+    }
+
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+        if response.status_code == 200:
+            scores = response.json()
+            return f"Similarity scores: {scores}"
+        else:
+            return f"Error from Hugging Face API: {response.status_code} - {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Error making request to Hugging Face API: {e}"
+      
+      main
 
     if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
         return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
@@ -672,6 +695,7 @@ def execute_tool(call, models):
         if n == "learn_url": return learn_url(a["url"])
         if n == "search_and_delete_knowledge": return search_and_delete_knowledge(a.get("query"), a.get("source"), a.get("ids"), a.get("confirm"))
         if n == "search_and_delete_history": return search_and_delete_history(a.get("query"), a.get("role"), a.get("ids"), a.get("confirm"))
+        if n == "get_available_metadata_sources": return get_available_metadata_sources()
 
         # Agentic Meta-Tools
         if n == "agentic_plan": return agentic_plan(a["prompt"], tools=list(tool_definitions.values()))
@@ -737,5 +761,6 @@ tool_definitions = {
     "learn_directory": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="learn_directory", description="Learn Dir", parameters={"type": "object", "properties": {"directory_path": {"type": "string"}, "ignore_patterns": {"type": "array", "items": {"type": "string"}}}, "required": ["directory_path"]})]),
     "learn_url": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="learn_url", description="Learn URL", parameters={"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]})]),
     "search_and_delete_knowledge": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="search_and_delete_knowledge", description="Search/Del Knowledge", parameters={"type": "object", "properties": {"query": {"type": "string"}, "source": {"type": "string"}, "ids": {"type": "array", "items": {"type": "string"}}, "confirm": {"type": "boolean"}}, "required": []})]),
-    "search_and_delete_history": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="search_and_delete_history", description="Search/Del History", parameters={"type": "object", "properties": {"query": {"type": "string"}, "role": {"type": "string"}, "ids": {"type": "array", "items": {"type": "string"}}, "confirm": {"type": "boolean"}}, "required": []})])
+    "search_and_delete_history": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="search_and_delete_history", description="Search/Del History", parameters={"type": "object", "properties": {"query": {"type": "string"}, "role": {"type": "string"}, "ids": {"type": "array", "items": {"type": "string"}}, "confirm": {"type": "boolean"}}, "required": []})]),
+    "get_available_metadata_sources": genai.types.Tool(function_declarations=[genai.types.FunctionDeclaration(name="get_available_metadata_sources", description="Get available metadata sources for filtering.", parameters={"type": "object", "properties": {}})])
 }

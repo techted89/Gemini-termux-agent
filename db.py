@@ -84,15 +84,38 @@ def learn_url(url):
         print(f"Error learning URL {url}: {e}") # Enhanced error message
 
 
-def get_relevant_context(prompt, n_results=5):
+def get_relevant_context(prompt, n_results=5, where_filter=None):
+    """
+    Retrieves relevant context from the knowledge base, with an optional metadata filter.
+
+    Args:
+        prompt (str): The user's query.
+        n_results (int, optional): The number of results to retrieve. Defaults to 5.
+        where_filter (dict, optional): A ChromaDB filter to apply to the search.
+                                      Example: {"source": "path/to/file.py"}
+
+    Returns:
+        str: A formatted string containing the relevant context, or an empty string.
+    """
     try:
         emb = get_embedding(prompt, task_type="RETRIEVAL_QUERY")
         if not emb:
             return ""
-        res = knowledge_collection.query(query_embeddings=[emb], n_results=n_results)
+
+        query_params = {
+            "query_embeddings": [emb],
+            "n_results": n_results
+        }
+        if where_filter:
+            query_params["where"] = where_filter
+
+        res = knowledge_collection.query(**query_params)
+
         if not res["documents"] or not res["documents"][0]:
             return ""
-        ctx = "--- RELEVANT CONTEXT ---\n"
+
+        filter_str = f" with filter: {where_filter}" if where_filter else ""
+        ctx = f"--- RELEVANT CONTEXT (Query: '{prompt}'{filter_str}) ---\n"
         for i, doc in enumerate(res["documents"][0]):
             source = res['metadatas'][0][i].get('source', 'Unknown') # Safely get source
             ctx += f"Source: {source}\nContent: {doc[:500]}...\n\n"
@@ -101,6 +124,29 @@ def get_relevant_context(prompt, n_results=5):
         print(f"Error retrieving context: {e}") # Added specific error logging
         return ""
 
+def get_available_metadata_sources():
+    """
+    Retrieves a list of all unique 'source' values from the knowledge collection.
+
+    This is useful for discovering what sources the agent can filter by in its queries.
+
+    Returns:
+        list[str]: A list of unique source strings, or an error message.
+    """
+    try:
+        # The 'include=[]' parameter ensures we only fetch metadata
+        all_entries = knowledge_collection.get(include=["metadatas"])
+
+        # Using a set to efficiently find unique sources
+        unique_sources = set()
+        for metadata in all_entries.get("metadatas", []):
+            if "source" in metadata:
+                unique_sources.add(metadata["source"])
+
+        return list(unique_sources) if unique_sources else "No metadata sources found."
+
+    except Exception as e:
+        return f"Error getting metadata sources: {e}"
 
 def delete_knowledge(ids=None, where=None):
     """
