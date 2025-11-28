@@ -1,5 +1,5 @@
 from api import agentic_reason_and_act, call_gemini_api
-from tools import tool_definitions, execute_tool
+from tools_mod import tool_definitions, execute_tool
 from db import get_relevant_context, get_available_metadata_sources, store_conversation_turn, get_relevant_history
 
 def run_agent_step(models, history, user_id, user_input=None, print_func=print):
