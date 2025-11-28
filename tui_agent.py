@@ -5,7 +5,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 import google.generativeai as genai
 import config
-from tools import tool_definitions
+from tools_mod import tool_definitions
 from agent import run_agent_step
 
 def tui_print_func(output):

@@ -1,15 +1,16 @@
-from dotenv import load_dotenv
-load_dotenv()
-
-import google.generativeai as genai
 import os
 import sys
 import argparse
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import google.generativeai as genai
 import config
 import tasks
 import db
 from agent import handle_agent_task
-from tools import tool_definitions
+from tools_mod import tool_definitions
 import tui_agent
 
 def main():
@@ -78,7 +79,7 @@ def main():
 
     if args.learn:
         if args.learn.startswith("http") and args.learn.endswith(".git"):
-            from tools import learn_repo_task
+            from tools_mod.web import learn_repo_task
             print(learn_repo_task(args.learn))
         else:
             print(db.learn_directory(args.learn))

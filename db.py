@@ -8,6 +8,7 @@ import time
 import numpy as np
 from bs4 import BeautifulSoup
 from config import PROJECT_CONTEXT_IGNORE, CHROMA_HOST
+from helpers import user_confirm
 
 try:
     if not CHROMA_HOST:
