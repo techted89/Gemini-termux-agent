@@ -574,6 +574,7 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
             return f"Error from Hugging Face API: {response.status_code} - {response.text}"
     except requests.exceptions.RequestException as e:
         return f"Error making request to Hugging Face API: {e}"
+ main
 # --- CM Tools ---
 def execute_cm_command(cm_command):
     """Executes a Collective Mind (CM) command."""
