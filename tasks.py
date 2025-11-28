@@ -99,6 +99,6 @@ def handle_install(model, prompt):
         if user_confirm(f"Run {cmd}?"):
             run_command(cmd, shell=True)
             return "Installed."
-    except:
+    except Exception:
         pass
     return "Failed."
