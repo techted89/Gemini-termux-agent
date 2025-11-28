@@ -575,53 +575,6 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
     except requests.exceptions.RequestException as e:
         return f"Error making request to Hugging Face API: {e}"
 
-    if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
-        return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
-
-    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
-    headers = {"Authorization": f"Bearer {config.HF_API_TOKEN}"}
-
-    payload = {
-        "inputs": {
-            "source_sentence": source_sentence,
-            "sentences": sentences_to_compare
-        }
-    }
-
-    try:
-        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
-        if response.status_code == 200:
-            scores = response.json()
-            return f"Similarity scores: {scores}"
-        else:
-            return f"Error from Hugging Face API: {response.status_code} - {response.text}"
-    except requests.exceptions.RequestException as e:
-        return f"Error making request to Hugging Face API: {e}"
-      
-      main
-
-    if not config.HF_API_TOKEN or config.HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
-        return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
-
-    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
-    headers = {"Authorization": f"Bearer {config.HF_API_TOKEN}"}
-
-    payload = {
-        "inputs": {
-            "source_sentence": source_sentence,
-            "sentences": sentences_to_compare
-        }
-    }
-
-    try:
-        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
-        if response.status_code == 200:
-            scores = response.json()
-            return f"Similarity scores: {scores}"
-        else:
-            return f"Error from Hugging Face API: {response.status_code} - {response.text}"
-    except requests.exceptions.RequestException as e:
-        return f"Error making request to Hugging Face API: {e}"
 # --- CM Tools ---
 def execute_cm_command(cm_command):
     """Executes a Collective Mind (CM) command."""
