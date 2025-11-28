@@ -5,7 +5,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 import google.generativeai as genai
 import config
-from tools import tool_definitions
+from tools_mod import tool_definitions
 from agent import run_agent_step
 
 def tui_print_func(output):
@@ -42,7 +42,7 @@ def main(initial_agent_prompt=None):
     if initial_agent_prompt:
         history.append({"role": "user", "parts": [initial_agent_prompt]})
         # Initial run to kick-start the agent
-        done, response = run_agent_step(models, history, print_func=tui_print_func)
+        done, response, _ = run_agent_step(models, history, user_id, print_func=tui_print_func)
         if response:
             console.print(Markdown(response))
     else:
@@ -56,6 +56,12 @@ def main(initial_agent_prompt=None):
                     break
                 if not user_input.strip():
                     continue
+
+                if user_input.startswith("/plan "):
+                    prompt = user_input[6:].strip()
+                    user_input = f"Using the `agentic_plan` tool, create a detailed plan for: {prompt}"
+                    console.print(Panel(f"[bold blue]Plan Mode:[/bold blue] {prompt}"))
+
                 # The user's input kicks off a new agent turn
                 done, response, _ = run_agent_step(models, history, user_id, user_input=user_input, print_func=tui_print_func)
             else:
