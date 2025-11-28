@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from api import agentic_reason_and_act
-from tools import tool_definitions
+from tools_mod import tool_definitions
 
 class TestAgenticWorkflow(unittest.TestCase):
 

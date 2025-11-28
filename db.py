@@ -8,6 +8,7 @@ import time
 import numpy as np
 from bs4 import BeautifulSoup
 from config import PROJECT_CONTEXT_IGNORE, CHROMA_HOST
+from helpers import user_confirm
 
 try:
     if not CHROMA_HOST:
@@ -109,7 +110,7 @@ def get_relevant_context(prompt, n_results=5, where_filter=None, lambda_mult=0.7
             return ""
 
         # 1. Retrieve a larger pool of candidates
-        fetch_k = n_results * 4
+        fetch_k = min(n_results * 20, 100) # Fetch up to 100 or 20x
         query_params = {
             "query_embeddings": [query_embedding],
             "n_results": fetch_k,

@@ -66,3 +66,11 @@ def save_to_file(filename, content):
         return f"\nSuccessfully saved content to: {filename}"
     except Exception as e:
         return f"Error saving file: {e}"
+
+def format_rag_context(context_string):
+    """Formats RAG context for display."""
+    if not context_string:
+        return ""
+    header = "\n--- 🧠 RAG Context ---\n"
+    footer = "\n----------------------\n"
+    return f"{header}{context_string}{footer}"
