@@ -55,3 +55,27 @@ def agentic_reason_and_act(model, conversation_history, tools):
 
     # If no function call, return the text content as the final response
     return thought, None
+
+def agentic_plan(model, prompt, tools=None):
+    """
+    Generates a plan using the model.
+    """
+    plan_prompt = f"Create a detailed step-by-step execution plan for the following request. Return the plan as a numbered list. Request: {prompt}"
+    response = call_gemini_api(model, [{"role": "user", "parts": [plan_prompt]}])
+    return response.text if response else "Failed to generate plan."
+
+def agentic_reason(model, prompt):
+    """
+    Generates reasoning using the model.
+    """
+    reason_prompt = f"Analyze the following situation and provide reasoning for the next step. Situation: {prompt}"
+    response = call_gemini_api(model, [{"role": "user", "parts": [reason_prompt]}])
+    return response.text if response else "Failed to generate reasoning."
+
+def agentic_execute(model, prompt):
+    """
+    Generates an execution command or code using the model.
+    """
+    exec_prompt = f"Provide the command or code to execute the following task: {prompt}"
+    response = call_gemini_api(model, [{"role": "user", "parts": [exec_prompt]}])
+    return response.text if response else "Failed to generate execution."

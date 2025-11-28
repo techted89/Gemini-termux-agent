@@ -1,5 +1,5 @@
 from api import agentic_reason_and_act, call_gemini_api
-from tools import tool_definitions, execute_tool
+from tools_mod import tool_definitions, execute_tool
 from db import get_relevant_context, get_available_metadata_sources, store_conversation_turn, get_relevant_history
 
 def run_agent_step(models, history, user_id, user_input=None, print_func=print):
@@ -19,11 +19,13 @@ def run_agent_step(models, history, user_id, user_input=None, print_func=print):
         standalone_question = call_gemini_api(models["default"], [{"role": "user", "parts": [contextualize_prompt]}]).text.strip()
         print_func(f"🔎 Standalone Question: {standalone_question}")
 
-        # 2. Retrieve relevant history
+        # 2. Retrieve relevant history and knowledge
         history_context = get_relevant_history(standalone_question, user_id)
+        knowledge_context = get_relevant_context(standalone_question)
         
         # 3. Inject context and append to history
-        final_input = f"{history_context}\nUser query: {standalone_question}"
+        full_context = f"{history_context}\n{knowledge_context}"
+        final_input = f"{full_context}\nUser query: {standalone_question}"
         history.append({"role": "user", "parts": [final_input]})
 
     try:
