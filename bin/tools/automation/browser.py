@@ -1,0 +1,75 @@
+import os
+import tempfile
+import shlex
+import google.generativeai as genai
+from utils.commands import run_command, user_confirm
+
+
+def execute_puppeteer_script(url, action="screenshot", output_file="screenshot.png"):
+    """
+    Executes a Puppeteer script to automate a Chromium browser on Termux.
+    Currently supports 'screenshot' and 'get_html' actions.
+    """
+    print(f'Tool: Running execute_puppeteer_script(url="{url}", action="{action}")')
+    if user_confirm(f"Execute Puppeteer script for URL: {url} with action: {action}?"):
+        script_content = f"""
+const puppeteer = require('puppeteer');
+
+(async () => {{
+    const browser = await puppeteer.launch({{
+        executablePath: '/data/data/com.termux/files/usr/bin/chromium',
+        args: ['--no-sandbox']
+    }});
+    const page = await browser.newPage();
+    await page.goto('{url}', {{waitUntil: 'networkidle2'}});
+
+    if ("{action}" === "screenshot") {{
+        await page.screenshot({{path: '{output_file}'}});
+        console.log(`Screenshot saved to {output_file}`);
+    }} else if ("{action}" === "get_html") {{
+        const html = await page.content();
+        console.log(html);
+    }} else {{
+        console.log(`Unknown action: {action}`);
+    }}
+
+    await browser.close();
+}})();
+"""
+        # Create a temporary JavaScript file
+        temp_js_path = os.path.join(tempfile.gettempdir(), "puppeteer_script.js")
+        with open(temp_js_path, "w") as f:
+            f.write(script_content)
+
+        try:
+            result = run_command(
+                f"node {shlex.quote(temp_js_path)}", shell=True, check_output=True
+            )
+            return result
+        except Exception as e:
+            return f"Error executing Puppeteer script: {e}"
+        finally:
+            if os.path.exists(temp_js_path):
+                os.remove(temp_js_path)
+    return "Denied."
+
+
+tool_definitions = {
+    "execute_puppeteer_script": genai.types.Tool(
+        function_declarations=[
+            genai.types.FunctionDeclaration(
+                name="execute_puppeteer_script",
+                description="Executes a Puppeteer script for browser automation (screenshot, get_html).",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string"},
+                        "action": {"type": "string"},
+                        "output_file": {"type": "string"},
+                    },
+                    "required": ["url"],
+                },
+            )
+        ]
+    ),
+}

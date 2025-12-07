@@ -1,0 +1,21 @@
+
+/* tui_agent.css */
+
+Screen {
+    layout: vertical;
+}
+
+Container {
+    layout: vertical;
+    height: 1fr;
+    padding: 1;
+}
+
+RichLog {
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+Input {
+    border: solid $primary;
+}

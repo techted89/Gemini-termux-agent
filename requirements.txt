@@ -7,3 +7,4 @@ python-dotenv
 Pillow
 prompt_toolkit
 requests
+textual

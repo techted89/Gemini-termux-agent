@@ -1,75 +1,93 @@
-from prompt_toolkit import PromptSession
-from prompt_toolkit.formatted_text import HTML
-from rich.console import Console
-from rich.panel import Panel
-from rich.markdown import Markdown
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Footer, Input, Static, RichLog
+from textual.containers import Container
 import google.generativeai as genai
+from bin.tools import tool_definitions
 import config
-from tools import tool_definitions
-from agent import run_agent_step
+from agent.core import run_agent_step
+from utils import database as db
 
-def tui_print_func(output):
-    """
-    Custom print function for the TUI to format agent output.
-    """
-    console = Console()
-    if "🤔 Thought:" in output:
-        # Style thoughts differently to distinguish them
-        console.print(Panel(f"[yellow]{output}[/yellow]", title="Thought", border_style="yellow"))
-    else:
-        # All other outputs are treated as standard messages
-        console.print(output)
 
-def main(initial_agent_prompt=None):
-    console = Console()
-    session = PromptSession()
-    genai.configure(api_key=config.API_KEY)
+class TuiAgentApp(App):
+    """A Textual app for the Gemini agent."""
 
-    models = {
-        "default": genai.GenerativeModel(config.MODEL_NAME),
-        "tools": genai.GenerativeModel(
-            config.MODEL_NAME,
-            safety_settings=config.SAFETY_SETTINGS,
-            tools=list(tool_definitions.values()),
-        ),
-    }
+    CSS_PATH = "tui_agent.css"
+    BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
 
-    console.print(Panel("[bold green]Gemini TUI Agent[/bold green]", expand=False))
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        yield Container(
+            RichLog(id="conversation", wrap=True),
+            RichLog(id="log", wrap=True),
+            Input(placeholder="Enter your prompt..."),
+        )
+        yield Footer()
 
-    user_id = "default_user"  # In a real app, this would be dynamic
-    history = [{"role": "user", "parts": ["You are a helpful AI assistant operating in a Termux environment."]}]
+    def on_mount(self) -> None:
+        """Called when the app is mounted."""
+        self.query_one(Input).focus()
 
-    if initial_agent_prompt:
-        history.append({"role": "user", "parts": [initial_agent_prompt]})
-        # Initial run to kick-start the agent
-        done, response = run_agent_step(models, history, print_func=tui_print_func)
-        if response:
-            console.print(Markdown(response))
-    else:
-        done = True
+    def on_input_submitted(self, message: Input.Submitted) -> None:
+        """Called when the user submits a prompt."""
+        prompt = message.value
+        self.query_one(Input).value = ""
+        self.query_one("#conversation").write(f"🧑‍💻: {prompt}")
+        self.run_agent(prompt)
 
-    while True:
-        try:
+    def action_toggle_dark(self) -> None:
+        """An action to toggle dark mode."""
+        self.dark = not self.dark
+
+    def run_agent(self, prompt):
+        """Runs the agent in a separate thread."""
+
+        def agent_thread():
+            # Initialize models
+            genai.configure(api_key=config.API_KEY)
+            models = {
+                "default": genai.GenerativeModel(config.MODEL_NAME),
+                "tools": genai.GenerativeModel(
+                    config.MODEL_NAME,
+                    safety_settings=config.SAFETY_SETTINGS,
+                    tools=list(tool_definitions.values()),
+                ),
+            }
+
+            # Initialize conversation history
+            history = []
+            if prompt:
+                history.append({"role": "user", "parts": [prompt]})
+
+            user_id = "tui_user"
+
+            # Run agent step
+            done, response, _ = run_agent_step(
+                models, history, user_id, user_input=prompt, print_func=self.log
+            )
+
+            # If the agent is done, we get a direct response.
             if done:
-                user_input = session.prompt(HTML("<ansigreen><b>You: </b></ansigreen>"))
-                if user_input.lower() in ["exit", "quit"]:
-                    break
-                if not user_input.strip():
-                    continue
-                # The user's input kicks off a new agent turn
-                done, response, _ = run_agent_step(models, history, user_id, user_input=user_input, print_func=tui_print_func)
+                self.query_one("#conversation").write(f"🤖: {response}")
             else:
-                # Continue the agent's turn until it's done
-                done, response, _ = run_agent_step(models, history, user_id, print_func=tui_print_func)
+                # If not done, it means a tool was called. We need to continue stepping.
+                while not done:
+                    done, response, _ = run_agent_step(
+                        models, history, user_id, print_func=self.log
+                    )
+                    if response:
+                        self.query_one("#conversation").write(f"🤖: {response}")
 
-            if response:
-                console.print(Markdown(response))
+        import threading
 
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            console.print(f"[bold red]An error occurred: {e}[/bold red]")
-            break
+        thread = threading.Thread(target=agent_thread)
+        thread.start()
+
+    def log(self, message):
+        """Logs a message to the log pane."""
+        self.query_one("#log").write(message)
+
 
 if __name__ == "__main__":
-    main()
+    app = TuiAgentApp()
+    app.run()
