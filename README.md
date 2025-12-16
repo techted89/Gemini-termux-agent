@@ -1,6 +1,6 @@
 # AGENT GUIDELINES FOR gemini_cli
 
-This document outlines essential information for AI agents working within the `gemini_cli` codebase.
+This document outlines essential information for AI agents working within the `gemini_cli` codebase
 
 ## 1. Codebase Overview
 
