@@ -3,8 +3,8 @@ title: Gemini Termux Agent
 emoji: 🦾
 colorFrom: red
 colorTo: blue
-sdk: python
-sdk_version: default 
+sdk: gradio
+sdk_version:3.10
 app_port: 
 pinned: false
 ---
