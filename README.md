@@ -1,3 +1,16 @@
+---
+title: Gemini Termux Agent 
+emoji: 🦾
+colorFrom: red
+colorTo: blue
+sdk: python
+sdk_version: default 
+app_port: 
+pinned: false
+---
+
+
+
 # AGENT GUIDELINES FOR gemini_cli
 code: python
 local
