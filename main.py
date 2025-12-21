@@ -7,30 +7,66 @@ load_dotenv()
 
 import google.generativeai as genai
 import config
-import tasks
-import db
-from agent import handle_agent_task
-from tools import tool_definitions
+import bin.agent_tasks as tasks
+from utils import database as db
+from agent.main import handle_agent_task
+from bin.tools import tool_definitions
 import tui_agent
 
+
 def main():
-    parser = argparse.ArgumentParser(description="A CLI tool to interact with Google Gemini, with agentic capabilities.")
+    parser = argparse.ArgumentParser(
+        description="A CLI tool to interact with Google Gemini, with agentic capabilities."
+    )
 
     # Modes of Operation
-    parser.add_argument("--tui", action="store_true", help="Run the agent in interactive Text UI mode.")
-    parser.add_argument("--agent", action="store_true", help="Run in autonomous agent mode to accomplish a specific goal.")
+    parser.add_argument(
+        "--tui", action="store_true", help="Run the agent in interactive Text UI mode."
+    )
+    parser.add_argument(
+        "--agent",
+        action="store_true",
+        help="Run in autonomous agent mode to accomplish a specific goal.",
+    )
 
     # Knowledge and Memory
-    parser.add_argument("--learn", help="Learn from a local directory or a Git repository URL.")
-    parser.add_argument("-r", "--read", action="append", help="Read a file and include its content in the context.")
+    parser.add_argument(
+        "--learn", help="Learn from a local directory or a Git repository URL."
+    )
+    parser.add_argument(
+        "-r",
+        "--read",
+        action="append",
+        help="Read a file and include its content in the context.",
+    )
 
     # Task-specific Arguments
-    parser.add_argument("--git-commit", action="store_true", help="Generate a Git commit message based on the diff.")
-    parser.add_argument("--gh-issue", help="Interact with a GitHub issue (e.g., 'summarize repo/owner#123').")
-    parser.add_argument("-g", "--generate-image", action="store_true", help="Generate an image based on the prompt.")
+    parser.add_argument(
+        "--git-commit",
+        action="store_true",
+        help="Generate a Git commit message based on the diff.",
+    )
+    parser.add_argument(
+        "--gh-issue",
+        help="Interact with a GitHub issue (e.g., 'summarize repo/owner#123').",
+    )
+    parser.add_argument(
+        "-g",
+        "--generate-image",
+        action="store_true",
+        help="Generate an image based on the prompt.",
+    )
     parser.add_argument("-e", "--edit", help="Edit a file with a given prompt.")
-    parser.add_argument("--create-project", action="store_true", help="Create a new project structure based on a prompt.")
-    parser.add_argument("--install", action="store_true", help="Generate installation commands based on a prompt.")
+    parser.add_argument(
+        "--create-project",
+        action="store_true",
+        help="Create a new project structure based on a prompt.",
+    )
+    parser.add_argument(
+        "--install",
+        action="store_true",
+        help="Generate installation commands based on a prompt.",
+    )
 
     # The main prompt for the agent or task
     parser.add_argument("prompt", nargs="*", help="The main prompt or instruction.")
@@ -67,9 +103,14 @@ def main():
     if args.read:
         for f_path in args.read:
             try:
-                with open(os.path.expanduser(f_path), 'r') as f:
+                with open(os.path.expanduser(f_path), "r") as f:
                     file_content = f.read()
-                initial_context.append({"role": "user", "parts": [f"CONTEXT FILE: {f_path}\n{file_content}"]})
+                initial_context.append(
+                    {
+                        "role": "user",
+                        "parts": [f"CONTEXT FILE: {f_path}\n{file_content}"],
+                    }
+                )
             except FileNotFoundError:
                 print(f"Warning: File not found at {f_path}, skipping.")
             except Exception as e:
@@ -79,7 +120,8 @@ def main():
 
     if args.learn:
         if args.learn.startswith("http") and args.learn.endswith(".git"):
-            from tools import learn_repo_task
+            from bin.tools.memory import learn_repo_task
+
             print(learn_repo_task(args.learn))
         else:
             print(db.learn_directory(args.learn))
@@ -97,13 +139,14 @@ def main():
     elif args.install:
         tasks.handle_install(prompt)
     elif args.edit:
-        tasks.handle_edit_file(args.edit, prompt, conversation_history=initial_context)
+        tasks.handle_edit_file(models["default"], args.edit, prompt)
     # If a prompt is provided (and not a specific task), default to the agentic mode.
     elif prompt:
         handle_agent_task(models, prompt, initial_context)
     else:
         # If no arguments are provided, print help.
         parser.print_help()
+
 
 if __name__ == "__main__":
     try:

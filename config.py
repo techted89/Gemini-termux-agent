@@ -5,6 +5,7 @@ API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ChromaDB Configuration
 CHROMA_HOST = "74.208.167.101"
+CHROMA_PORT = 8000
 
 # Google Custom Search API Configuration
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "YOUR_GOOGLE_SEARCH_API_KEY")

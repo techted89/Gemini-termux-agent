@@ -1,6 +1,5 @@
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_command(command, shell=False, check_output=False, ignore_errors=False):
@@ -46,23 +45,3 @@ def user_confirm(question):
                 return False
         except (EOFError, KeyboardInterrupt):
             return False
-
-
-def display_image_termux(image_path):
-    """Opens an image using termux-open."""
-    try:
-        subprocess.run(["termux-open", image_path], check=True, capture_output=True)
-        print(f"Image opened in default viewer: {image_path}")
-    except Exception:
-        print("Warning: Failed to open image. Is 'termux-api' installed?")
-
-
-def save_to_file(filename, content):
-    """Saves content to a file."""
-    try:
-        p = Path(filename)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(content)
-        return f"\nSuccessfully saved content to: {filename}"
-    except Exception as e:
-        return f"Error saving file: {e}"

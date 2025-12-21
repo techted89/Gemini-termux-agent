@@ -1,4 +1,3 @@
-
 def call_gemini_api(model, conversation_history, tools=None):
     """
     A simple, centralized wrapper for generate_content to handle errors gracefully.
@@ -21,6 +20,7 @@ def call_gemini_api(model, conversation_history, tools=None):
         # Re-raising the exception allows the calling function to handle it,
         # for example, by attempting a retry.
         raise
+
 
 def agentic_reason_and_act(model, conversation_history, tools):
     """

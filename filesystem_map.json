@@ -1,0 +1,183 @@
+
+{
+  ".": {
+    "description": "The root directory of the project.",
+    "purpose": "Contains all the files and directories of the project."
+  },
+  ".git": {
+    "description": "The Git directory.",
+    "purpose": "Contains all the information about the Git repository."
+  },
+  ".gitignore": {
+    "description": "The Git ignore file.",
+    "purpose": "Specifies which files and directories should be ignored by Git."
+  },
+  "AGENTS.md": {
+    "description": "A markdown file containing information for the agent.",
+    "purpose": "Provides the agent with information about the project, the tools available, and the tasks that can be performed."
+  },
+  "README.md": {
+    "description": "The README file.",
+    "purpose": "Provides a general overview of the project."
+  },
+  "agent": {
+    "description": "The agent directory.",
+    "purpose": "Contains all the files related to the agent's core logic."
+  },
+  "agent/__init__.py": {
+    "description": "The agent init file.",
+    "purpose": "Initializes the agent package."
+  },
+  "agent/core.py": {
+    "description": "The agent core file.",
+    "purpose": "Contains the core logic of the agent."
+  },
+  "agent/main.py": {
+    "description": "The agent main file.",
+    "purpose": "Contains the main function for the agent."
+  },
+  "api.py": {
+    "description": "The API file.",
+    "purpose": "Contains the functions for interacting with the Gemini API."
+  },
+  "bin": {
+    "description": "The bin directory.",
+    "purpose": "Contains all the executable files and tools."
+  },
+  "bin/__init__.py": {
+    "description": "The bin init file.",
+    "purpose": "Initializes the bin package."
+  },
+  "bin/agent_tasks.py": {
+    "description": "The agent tasks file.",
+    "purpose": "Contains the tasks that the agent can perform."
+  },
+  "bin/run_verification.py": {
+    "description": "The run verification file.",
+    "purpose": "Runs the verification script."
+  },
+  "bin/tool_utils.py": {
+    "description": "The tool utils file.",
+    "purpose": "Contains the utility functions for the tools."
+  },
+  "bin/tools": {
+    "description": "The tools directory.",
+    "purpose": "Contains all the tools that the agent can use."
+  },
+  "bin/tools/__init__.py": {
+    "description": "The tools init file.",
+    "purpose": "Initializes the tools package."
+  },
+  "bin/tools/automation": {
+    "description": "The automation directory.",
+    "purpose": "Contains all the automation tools."
+  },
+  "bin/tools/automation/__init__.py": {
+    "description": "The automation init file.",
+    "purpose": "Initializes the automation package."
+  },
+  "bin/tools/automation/browser.py": {
+    "description": "The browser automation file.",
+    "purpose": "Contains the tools for browser automation."
+  },
+  "bin/tools/automation/droidrun.py": {
+    "description": "The droidrun automation file.",
+    "purpose": "Contains the tools for droidrun automation."
+  },
+  "bin/tools/automation/ui.py": {
+    "description": "The UI automation file.",
+    "purpose": "Contains the tools for UI automation."
+  },
+  "bin/tools/cm.py": {
+    "description": "The CM tools file.",
+    "purpose": "Contains the tools for interacting with the CM."
+  },
+  "bin/tools/core.py": {
+    "description": "The core tools file.",
+    "purpose": "Contains the core tools that the agent can use."
+  },
+  "bin/tools/database.py": {
+    "description": "The database tools file.",
+    "purpose": "Contains the tools for interacting with the database."
+  },
+  "bin/tools/debug_test.py": {
+    "description": "The debug test file.",
+    "purpose": "Contains the debug test tool."
+  },
+  "bin/tools/file_ops.py": {
+    "description": "The file ops tools file.",
+    "purpose": "Contains the tools for file operations."
+  },
+  "bin/tools/git.py": {
+    "description": "The git tools file.",
+    "purpose": "Contains the tools for interacting with git."
+  },
+  "bin/tools/nlp.py": {
+    "description": "The nlp tools file.",
+    "purpose": "Contains the tools for interacting with the nlp."
+  },
+  "bin/tools/memory.py": {
+    "description": "The memory tools file.",
+    "purpose": "Contains the tools for interacting with the agent's memory."
+  },
+  "bin/tools/project_tester.py": {
+    "description": "The project tester file.",
+    "purpose": "Contains the project tester tool."
+  },
+  "bin/tools/web.py": {
+    "description": "The web tools file.",
+    "purpose": "Contains the tools for interacting with the web."
+  },
+  "config.py": {
+    "description": "The config file.",
+    "purpose": "Contains the configuration for the project."
+  },
+  "delete_collections.py": {
+    "description": "The delete collections file.",
+    "purpose": "Deletes the collections from the database."
+  },
+  "main.py": {
+    "description": "The main file.",
+    "purpose": "The main entry point for the project."
+  },
+  "requirements.txt": {
+    "description": "The requirements file.",
+    "purpose": "Contains the dependencies for the project."
+  },
+  "tests": {
+    "description": "The tests directory.",
+    "purpose": "Contains all the tests for the project."
+  },
+  "tests/agent_verify_prompt.py": {
+    "description": "The agent verify prompt file.",
+    "purpose": "Contains the tests for the agent's prompt verification."
+  },
+  "tui_agent.py": {
+    "description": "The tui agent file.",
+    "purpose": "Contains the TUI for the agent."
+  },
+  "utils": {
+    "description": "The utils directory.",
+    "purpose": "Contains all the utility functions for the project."
+  },
+  "utils/__init__.py": {
+    "description": "The utils init file.",
+    "purpose": "Initializes the utils package."
+  },
+  "utils/commands.py": {
+    "description": "The commands file.",
+    "purpose": "Contains the command utility functions."
+  },
+  "utils/database.py": {
+    "description": "The database file.",
+    "purpose": "Contains the database utility functions."
+  },
+  "utils/display.py": {
+    "description": "The display file.",
+    "purpose": "Contains the display utility functions."
+  },
+  "utils/file_system.py": {
+    "description": "The file system file.",
+    "purpose": "Contains the file system utility functions."
+  }
+}
