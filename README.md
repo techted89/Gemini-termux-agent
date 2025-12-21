@@ -1,6 +1,20 @@
-# AGENT GUIDELINES FOR gemini_cli
+---
+title: Gemini Termux Agent 
+emoji: 🦾
+colorFrom: red
+colorTo: blue
+sdk: gradio
+sdk_version:3.10
+app_port: 
+pinned: false
+---
 
-This document outlines essential information for AI agents working within the `gemini_cli` codebase.
+
+
+# AGENT GUIDELINES FOR gemini_cli
+code: python
+local
+This document outlines essential information for AI agents working within the `gemini_cli` codebase
 
 ## 1. Codebase Overview
 
