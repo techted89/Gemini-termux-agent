@@ -7,10 +7,10 @@ load_dotenv()
 
 import google.generativeai as genai
 import config
-import bin.agent_tasks as tasks
+import tasks
 from utils import database as db
 from agent.main import handle_agent_task
-from bin.tools import tool_definitions
+from tools_mod import tool_definitions
 import tui_agent
 
 
@@ -67,12 +67,22 @@ def main():
         action="store_true",
         help="Generate installation commands based on a prompt.",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Automatically confirm all prompts.",
+    )
 
     # The main prompt for the agent or task
     parser.add_argument("prompt", nargs="*", help="The main prompt or instruction.")
 
     args = parser.parse_args()
     prompt = " ".join(args.prompt)
+
+    # Handle --yes flag by monkeypatching user_confirm
+    if args.yes:
+        import utils.commands
+        utils.commands.user_confirm = lambda msg: True
 
     # --- Mode Dispatcher ---
 
@@ -120,7 +130,7 @@ def main():
 
     if args.learn:
         if args.learn.startswith("http") and args.learn.endswith(".git"):
-            from bin.tools.memory import learn_repo_task
+            from tools_mod.memory import learn_repo_task
 
             print(learn_repo_task(args.learn))
         else:
@@ -129,15 +139,15 @@ def main():
 
     # If any specific task is provided, execute it.
     if args.git_commit:
-        tasks.handle_git_commit(prompt)
+        tasks.handle_git_commit(models["default"], prompt)
     elif args.gh_issue:
-        tasks.handle_gh_issue(args.gh_issue, prompt)
+        tasks.handle_gh_issue(models["default"], args.gh_issue, prompt)
     elif args.generate_image:
-        tasks.handle_image_generation(prompt)
+        tasks.handle_image_generation(models["default"], prompt)
     elif args.create_project:
-        tasks.handle_create_project(prompt)
+        tasks.handle_create_project(models["default"], prompt)
     elif args.install:
-        tasks.handle_install(prompt)
+        tasks.handle_install(models["default"], prompt)
     elif args.edit:
         tasks.handle_edit_file(models["default"], args.edit, prompt)
     # If a prompt is provided (and not a specific task), default to the agentic mode.

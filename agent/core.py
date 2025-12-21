@@ -1,12 +1,12 @@
 from api import agentic_reason_and_act, call_gemini_api
-from bin.tools import tool_definitions
+from tools_mod import tool_definitions
 from bin.tool_utils import execute_tool
 from utils.database import (
     get_relevant_context,
     store_conversation_turn,
     get_relevant_history,
 )
-from bin.tools.nlp import huggingface_sentence_similarity
+from tools_mod.nlp import huggingface_sentence_similarity
 
 
 def run_agent_step(models, history, user_id, user_input=None, print_func=print):
