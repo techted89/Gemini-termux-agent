@@ -42,6 +42,23 @@ def long_press_text(text, duration=1.0, timeout=10):
     except Exception as e:
         return f"Error long-pressing element by text: {e}"
 
+def extract_text_from_screen():
+    """Extracts all visible text from the screen."""
+    try:
+        d = u2.connect()
+        xml = d.dump_hierarchy()
+        # Parse XML to extract text attribute from all nodes
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(xml)
+        texts = []
+        for elem in root.iter():
+            text = elem.get('text')
+            if text:
+                texts.append(text)
+        return "\n".join(texts)
+    except Exception as e:
+        return f"Error extracting text from screen: {e}"
+
 
 tool_definitions = {
     "open_app": genai.types.Tool(
@@ -86,6 +103,18 @@ tool_definitions = {
                         "timeout": {"type": "number", "format": "float"},
                     },
                     "required": ["text"],
+                },
+            )
+        ]
+    ),
+    "extract_text_from_screen": genai.types.Tool(
+        function_declarations=[
+            genai.types.FunctionDeclaration(
+                name="extract_text_from_screen",
+                description="Extracts all visible text from the screen.",
+                parameters={
+                    "type": "object",
+                    "properties": {},
                 },
             )
         ]

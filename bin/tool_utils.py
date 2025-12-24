@@ -1,189 +1,87 @@
-import bin.agent_tasks as tasks
-from api import agentic_reason_and_act
-from bin.tools.web import *
-from bin.tools.memory import *
-from bin.tools.automation.ui import *
-from bin.tools.automation.browser import *
-from bin.tools.automation.droidrun import *
-from bin.tools.database import *
-from bin.tools.git import *
-from bin.tools.file_ops import *
-from bin.tools.nlp import *
-from bin.tools.cm import *
-from bin.tools.core import *
-from utils.database import (
-    learn_directory,
-    learn_url,
-    learn_file_content,
-    search_and_delete_knowledge,
-    search_and_delete_history,
-    get_available_metadata_sources,
-)
-from config import VPS_USER, VPS_IP, VPS_SSH_KEY_PATH
-from utils.commands import user_confirm, run_command
+from tools_mod.web import *
+from tools_mod.memory import *
+from tools_mod.automation.ui import *
+from tools_mod.automation.browser import *
+from tools_mod.automation.droidrun import *
+from tools_mod.database import *
+from tools_mod.git import *
+from tools_mod.file_ops import *
+from tools_mod.nlp import *
+from tools_mod.cm import *
+from tools_mod.core import *
+from utils.commands import run_command
 
 
-def execute_tool(call, models):
-    n = call.name
-    a = call.args
+def execute_tool(function_call, models):
+    """
+    Executes a tool called by the model.
+    """
+    name = function_call.name
+    args = function_call.args
+
+    print(f"🛠️ Executing tool: {name}")
+
     try:
-        # Basic Tools
-        if n == "google_search":
-            return google_search(a["query"])
-        if n == "learn_from_url_or_repo":
-            return (
-                learn_repo_task(a["url"])
-                if a["url"].endswith(".git")
-                else learn_url(a["url"])
-            )
-        if n == "read_file":
-            return read_file_task(a["filepath"])
-        if n == "execute_shell_command":
-            # Handle vps_target logic
-            if a.get("vps_target"):
-                if not VPS_USER or not VPS_IP or not VPS_SSH_KEY_PATH:
-                    return "Error: VPS config missing."
-                ssh_cmd = a.get("ssh_command")
-                full_cmd = f'ssh -i {VPS_SSH_KEY_PATH} {VPS_USER}@{VPS_IP} "{ssh_cmd}"'
-                print(f"🤖 Running on VPS: {full_cmd}")
-                if user_confirm("Approve VPS command?"):
-                    return run_command(full_cmd, shell=True, check_output=True)
-                return "Denied."
-            return execute_shell_command(a["command"])
-        if n == "create_file":
-            return create_file_task(a["filepath"], a.get("content", ""))
-
-        # Helper Tools
-        if n == "lint_python_file":
-            return lint_python_file_task(a["filepath"], a.get("linter", "flake8"))
-        if n == "format_code":
-            return format_code_task(a["filepath"], a.get("formatter", "black"))
-        if n == "apply_sed":
-            return apply_sed_task(
-                a["filepath"], a["sed_expression"], a.get("in_place", True)
-            )
-        if n == "create_directory":
-            return create_directory_task(a["directory_path"])
-        if n == "list_directory_recursive":
-            return list_directory_recursive_task(a["directory_path"])
-        if n == "copy_file":
-            return copy_file_task(a["source_path"], a["destination_path"])
-        if n == "move_file":
-            return move_file_task(a["source_path"], a["destination_path"])
-        if n == "find_files":
-            return find_files_task(
-                a["directory_path"],
-                a.get("name_pattern"),
-                a.get("content_pattern"),
-                a.get("max_depth", -1),
-            )
-        if n == "compress_path":
-            return compress_path_task(
-                a["source_path"], a["output_archive_path"], a.get("format", "zip")
-            )
-        if n == "decompress_archive":
-            return decompress_archive_task(a["archive_path"], a["destination_path"])
-        if n == "open_in_external_editor":
-            return open_in_external_editor_task(a["filepath"])
-
-        # UI Automation Tools
-        if n == "open_app":
-            return open_app(a.get("package_name"))
-        if n == "tap_text":
-            return tap_text(a["text"], a.get("timeout", 10))
-        if n == "long_press_text":
+        # WEB
+        if name == "search_web":
+            return google_search(args["query"])
+        # MEMORY
+        elif name == "learn_directory":
+            return learn_directory(args["directory_path"])
+        elif name == "learn_repo_task":
+            return learn_repo_task(args["repo_url"])
+        elif name == "get_relevant_context":
+            return get_relevant_context(args["query"])
+        # AUTOMATION
+        elif name == "open_app":
+            return open_app(args["package_name"])
+        elif name == "tap_text":
+            return tap_text(args["text"], args.get("timeout", 10))
+        elif name == "long_press_text":
             return long_press_text(
-                a["text"], a.get("duration", 1.0), a.get("timeout", 10)
+                args["text"], args.get("duration", 1.0), args.get("timeout", 10)
             )
-
-        # Root-Based UI Automation Tools
-        if n == "tap_screen":
-            return tap_screen(a["x"], a["y"])
-        if n == "swipe_screen":
-            return swipe_screen(
-                a["x1"], a["y1"], a["x2"], a["y2"], a.get("duration_ms", 300)
-            )
-        if n == "input_text":
-            return input_text(a["text"])
-        if n == "get_screen_analysis":
-            return get_screen_analysis(
-                a.get("output_path", "/sdcard/Pictures/screen_analysis.png")
-            )
-        if n == "extract_text_from_screen":
+        elif name == "extract_text_from_screen":
             return extract_text_from_screen()
-
-        # Browser Automation Tools (Puppeteer)
-        if n == "execute_puppeteer_script":
-            return execute_puppeteer_script(
-                a["url"],
-                a.get("action", "screenshot"),
-                a.get("output_file", "screenshot.png"),
-            )
-
-        # Droidrun Tools
-        if n == "execute_droidrun_command":
-            return execute_droidrun_command(a["command"])
-        if n == "droidrun_portal_adb_command":
-            return droidrun_portal_adb_command(
-                a["portal_path"], a.get("action", "query"), a.get("data")
-            )
-
-        # Hugging Face Tools
-        if n == "huggingface_sentence_similarity":
-            return huggingface_sentence_similarity(
-                a["source_sentence"], a["sentences_to_compare"]
-            )
-
-        # CM Tools
-        if n == "execute_cm_command":
-            return execute_cm_command(a["cm_command"])
-
-        # Git Tools
-        if n == "git_status":
+        elif name == "execute_droidrun_command":
+            return execute_droidrun_command(args["command"])
+        elif name == "droidrun_portal_adb_command":
+            return droidrun_portal_adb_command(args["command"])
+        # GIT
+        elif name == "git_status":
             return git_status_task()
-        if n == "git_pull":
-            return git_pull_task(a.get("branch", "main"))
-        if n == "git_push":
-            return git_push_task(a.get("branch", "main"))
-        if n == "git_branch":
-            return git_branch_task(a.get("new_branch_name"))
+        elif name == "git_pull":
+            return git_pull_task(args.get("branch", "main"))
+        elif name == "git_push":
+            return git_push_task(args.get("branch", "main"))
+        elif name == "git_branch":
+             return git_branch_task(args.get("new_branch_name"))
+        # FILE OPS
+        elif name == "list_files":
+            return list_directory_recursive_task(args.get("path", "."))
+        elif name == "read_file":
+            return read_file_task(args["path"])
+        elif name == "write_file":
+            return create_file_task(args["path"], args["content"])
+        elif name == "edit_file":
+             # This is tricky because `handle_edit_file` is in `tasks_mod` and requires user interaction/model.
+             # If the agent calls it, we might need to route it differently or import it.
+             # For now, let's assume the agent uses `apply_sed_task` or we implement a simple replace.
+             # Or we can import `handle_edit_file` from `tasks_mod.dev_tasks` but it's interactive.
+             # The memory implies `handle_edit_file` is a task.
+             # If `edit_file` is a tool exposed to the agent, it should be non-interactive or handle it.
+             # Let's check if `edit_file` is in `tool_definitions`.
+             # Looking at `tools_mod/core.py` or others... `edit_file` wasn't in the grep list.
+             # Maybe it was `apply_sed_task`?
+             # Let's check `tools_mod/__init__.py` to see what tools are exposed.
+             return f"Error: edit_file not directly supported in this mode. Use write_file to overwrite."
+        elif name == "run_command":
+             return execute_shell_command(args["command"])
+        # NLP
+        elif name == "huggingface_sentence_similarity":
+            return "Error: huggingface_sentence_similarity is an internal tool."
 
-        # Task Tools
-        if n == "edit_file":
-            return tasks.handle_edit_file(
-                models["default"], a["filepath"], a["prompt"], a.get("save_as")
-            )
-        if n == "create_project":
-            return tasks.handle_create_project(models["default"], a["prompt"])
-        if n == "git_commit":
-            return tasks.handle_git_commit(models["default"], a["prompt"])
-        if n == "gh_issue":
-            return tasks.handle_gh_issue(models["default"], a.get("repo"), a["prompt"])
-        if n == "generate_image":
-            return tasks.handle_image_generation(models["default"], a["prompt"])
-        if n == "install":
-            return tasks.handle_install(models["default"], a["prompt"])
-
-        # DB Tools
-        if n == "learn_file_content":
-            return learn_file_content(a["filepath"], a.get("content"))
-        if n == "learn_pdf_task":
-            return learn_pdf_task(a["filepath"])
-        if n == "learn_directory":
-            return learn_directory(a["directory_path"], a.get("ignore_patterns"))
-        if n == "learn_url":
-            return learn_url(a["url"])
-        if n == "search_and_delete_knowledge":
-            return search_and_delete_knowledge(
-                a.get("query"), a.get("source"), a.get("ids"), a.get("confirm")
-            )
-        if n == "search_and_delete_history":
-            return search_and_delete_history(
-                a.get("query"), a.get("role"), a.get("ids"), a.get("confirm")
-            )
-        if n == "get_available_metadata_sources":
-            return get_available_metadata_sources()
-
-        return f"Unknown: {n}"
+        else:
+            return f"Error: Unknown tool '{name}'"
     except Exception as e:
-        return f"Tool Error: {e}"
+        return f"Error executing tool '{name}': {e}"

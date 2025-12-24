@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 sys.modules["google.generativeai"] = MagicMock()
 
 from api import agentic_reason_and_act
-from bin.tools import tool_definitions
+from tools_mod import tool_definitions
 
 
 class TestAgent(unittest.TestCase):
