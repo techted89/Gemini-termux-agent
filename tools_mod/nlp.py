@@ -1,4 +1,4 @@
-import google.generativeai as genai
+import google.genai as genai
 import requests
 from config import HF_API_TOKEN
 

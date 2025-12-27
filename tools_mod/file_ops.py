@@ -4,7 +4,7 @@ import shutil
 import shlex
 import fnmatch
 import re
-import google.generativeai as genai
+import google.genai as genai
 from utils.commands import run_command
 
 
