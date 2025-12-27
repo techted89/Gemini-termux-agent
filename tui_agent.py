@@ -1,5 +1,5 @@
 import sys
-import google.generativeai as genai
+import google.genai as genai
 from tools_mod import tool_definitions
 import config
 from agent.core import run_agent_step
@@ -8,16 +8,16 @@ from dotenv import load_dotenv
 from tools_mod import charm
 import threading
 import time
+from utils.model_wrapper import GenerativeModelWrapper
 
 def main(initial_agent_prompt=None):
     load_dotenv()
 
     # Initialize models
     try:
-        genai.configure(api_key=config.API_KEY)
         models = {
-            "default": genai.GenerativeModel(config.MODEL_NAME),
-            "tools": genai.GenerativeModel(
+            "default": GenerativeModelWrapper(config.MODEL_NAME),
+            "tools": GenerativeModelWrapper(
                 config.MODEL_NAME,
                 safety_settings=config.SAFETY_SETTINGS,
                 tools=list(tool_definitions.values()),

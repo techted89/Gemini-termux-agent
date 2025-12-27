@@ -1,7 +1,7 @@
 import os
 import tempfile
 import shlex
-import google.generativeai as genai
+import google.genai as genai
 from utils.commands import run_command, user_confirm
 
 
@@ -11,30 +11,46 @@ def execute_puppeteer_script(url, action="screenshot", output_file="screenshot.p
     Currently supports 'screenshot' and 'get_html' actions.
     """
     print(f'Tool: Running execute_puppeteer_script(url="{url}", action="{action}")')
+
+    # Check for node
+    try:
+        run_command("node -v", shell=True, check_output=True)
+    except Exception:
+        return "Error: Node.js is not installed. Please install it to use this tool."
+
     if user_confirm(f"Execute Puppeteer script for URL: {url} with action: {action}?"):
         script_content = f"""
-const puppeteer = require('puppeteer');
+try {{
+    const puppeteer = require('puppeteer');
 
-(async () => {{
-    const browser = await puppeteer.launch({{
-        executablePath: '/data/data/com.termux/files/usr/bin/chromium',
-        args: ['--no-sandbox']
-    }});
-    const page = await browser.newPage();
-    await page.goto('{url}', {{waitUntil: 'networkidle2'}});
+    (async () => {{
+        const browser = await puppeteer.launch({{
+            executablePath: '/data/data/com.termux/files/usr/bin/chromium',
+            args: ['--no-sandbox']
+        }});
+        const page = await browser.newPage();
+        await page.goto('{url}', {{waitUntil: 'networkidle2'}});
 
-    if ("{action}" === "screenshot") {{
-        await page.screenshot({{path: '{output_file}'}});
-        console.log(`Screenshot saved to {output_file}`);
-    }} else if ("{action}" === "get_html") {{
-        const html = await page.content();
-        console.log(html);
+        if ("{action}" === "screenshot") {{
+            await page.screenshot({{path: '{output_file}'}});
+            console.log(`Screenshot saved to {output_file}`);
+        }} else if ("{action}" === "get_html") {{
+            const html = await page.content();
+            console.log(html);
+        }} else {{
+            console.log(`Unknown action: {action}`);
+        }}
+
+        await browser.close();
+    }})();
+}} catch (error) {{
+    if (error.code === 'MODULE_NOT_FOUND') {{
+        console.error('Puppeteer is not installed. Please run "npm i puppeteer" to use this tool.');
     }} else {{
-        console.log(`Unknown action: {action}`);
+        console.error('An error occurred:', error);
     }}
-
-    await browser.close();
-}})();
+    process.exit(1);
+}}
 """
         # Create a temporary JavaScript file
         temp_js_path = os.path.join(tempfile.gettempdir(), "puppeteer_script.js")

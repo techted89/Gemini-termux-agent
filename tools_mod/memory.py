@@ -1,7 +1,8 @@
-import google.generativeai as genai
+import google.genai as genai
 import tempfile
 from pypdf import PdfReader
-from utils.database import learn_directory, learn_file_content
+from utils.learning import learn_directory
+from utils.learning import learn_file_content
 from utils.commands import run_command
 
 
