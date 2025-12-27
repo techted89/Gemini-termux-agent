@@ -1,7 +1,7 @@
 from tools_mod.web import *
 from tools_mod.memory import *
 from tools_mod.automation.ui import *
-from tools_mod.automation.browser import *
+from tools_mod.automation.web_auto import *
 from tools_mod.automation.droidrun import *
 from tools_mod.database import *
 from tools_mod.git import *
@@ -43,6 +43,12 @@ def execute_tool(function_call, models):
             )
         elif name == "extract_text_from_screen":
             return extract_text_from_screen()
+        elif name == "web_navigate":
+            return web_navigate(args["url"])
+        elif name == "web_screenshot":
+            return web_screenshot(args.get("output_file", "screenshot.png"))
+        elif name == "web_get_html":
+            return web_get_html(args.get("output_file", "web_content.xml"))
         elif name == "execute_droidrun_command":
             return execute_droidrun_command(args["command"])
         elif name == "droidrun_portal_adb_command":

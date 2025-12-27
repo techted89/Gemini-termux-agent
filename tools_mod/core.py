@@ -1,4 +1,4 @@
-import google.generativeai as genai
+import google.genai as genai
 import os
 from utils.commands import run_command, user_confirm
 

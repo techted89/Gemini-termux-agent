@@ -5,14 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import google.generativeai as genai
+import google.genai as genai
 import config
 import tasks
 from utils import database as db
 from agent.main import handle_agent_task
 from tools_mod import tool_definitions
 import tui_agent
-
+from utils.model_wrapper import GenerativeModelWrapper
 
 def main():
     parser = argparse.ArgumentParser(
@@ -93,12 +93,11 @@ def main():
     if not config.API_KEY or config.API_KEY == "YOUR_GEMINI_API_KEY":
         print("Error: API_KEY is not set in config.py or as an environment variable.")
         sys.exit(1)
-    genai.configure(api_key=config.API_KEY)
 
     try:
         models = {
-            "default": genai.GenerativeModel(config.MODEL_NAME),
-            "tools": genai.GenerativeModel(
+            "default": GenerativeModelWrapper(config.MODEL_NAME),
+            "tools": GenerativeModelWrapper(
                 config.MODEL_NAME,
                 safety_settings=config.SAFETY_SETTINGS,
                 tools=list(tool_definitions.values()),

@@ -1,7 +1,7 @@
 from .web import tool_definitions as web_tools
 from .memory import tool_definitions as memory_tools
 from .automation.ui import tool_definitions as ui_automation_tools
-from .automation.browser import tool_definitions as browser_tools
+from .automation.web_auto import tool_definitions as web_auto_tools
 from .automation.droidrun import tool_definitions as droidrun_tools
 from .database import tool_definitions as database_tools
 from .git import tool_definitions as git_tools
@@ -14,7 +14,7 @@ tool_definitions = {
     **web_tools,
     **memory_tools,
     **ui_automation_tools,
-    **browser_tools,
+    **web_auto_tools,
     **droidrun_tools,
     **database_tools,
     **git_tools,

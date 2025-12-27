@@ -1,4 +1,4 @@
-import google.generativeai as genai
+import google.genai as genai
 from utils.database import (
     search_and_delete_knowledge,
     search_and_delete_history,

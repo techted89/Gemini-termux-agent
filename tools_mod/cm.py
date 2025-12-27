@@ -1,5 +1,5 @@
 import shlex
-import google.generativeai as genai
+import google.genai as genai
 from utils.commands import run_command, user_confirm
 
 
