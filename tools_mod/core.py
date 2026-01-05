@@ -39,7 +39,40 @@ def read_file_task(filepath):
         return f"Error reading file {filepath}: {e}"
 
 
+def install_packages(packages: list[str]):
+    """Installs a list of packages using apt-get after user confirmation."""
+    if not isinstance(packages, list):
+        return "Error: a list of package names is required."
+
+    package_str = " ".join(packages)
+    cmd = f"sudo apt-get install -y {package_str}"
+
+    if user_confirm(f"Run: {cmd}?"):
+        return run_command(cmd, shell=True, check_output=True)
+    return "Denied."
+
+
 tool_definitions = {
+    "install_packages": genai.types.Tool(
+        function_declarations=[
+            genai.types.FunctionDeclaration(
+                name="install_packages",
+                description="Install packages using apt-get",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "packages": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "required": ["packages"],
+                },
+            )
+        ]
+    ),
     "execute_shell_command": genai.types.Tool(
         function_declarations=[
             genai.types.FunctionDeclaration(
