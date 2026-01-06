@@ -1,277 +1,104 @@
+import sys
+import os
+import time
+import hashlib
 import chromadb
-from sklearn.metrics.pairwise import cosine_similarity
-from urllib.parse import urljoin, urlparse
-from utils.commands import user_confirm
+from chromadb.config import Settings
 import config
-import google.genai as genai
-from google.genai import types
-import numpy as np
 
-client = genai.Client(api_key=config.API_KEY)
+try:
+    import pysqlite3
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
 
+db_client = chromadb.HttpClient(host='localhost', port=8000)
 
-# --- Embedding ---
-EMBEDDING_MODEL = "models/embedding-001"
-
-# --- ChromaDB ---
-chroma_client = chromadb.HttpClient(host=config.CHROMA_HOST, port=config.CHROMA_PORT)
-collection = chroma_client.get_or_create_collection(name="gemini_rag_collection")
-conversation_history_collection = chroma_client.get_or_create_collection(
-    name="conversation_history"
-)
-
-
-def get_embedding(text):
-    """
-    Generates an embedding for the given text.
-    """
-    if not text.strip():
-        print("Attempted to embed an empty string.")
-        return None
-
+def get_relevant_history(query, n_results=15):
     try:
-        # The API can handle lists of texts, but we'll send one at a time.
-        result = client.models.embed_content(
-            model=EMBEDDING_MODEL,
-            content=text,
-            task_type=types.TaskType.RETRIEVAL_DOCUMENT,
-        )
-        return result["embedding"]
-    except Exception as e:
-        print(f"An error occurred during embedding: {e}")
-        return None
+        collection = db_client.get_or_create_collection("agent_memory")
+        results = collection.query(query_texts=[query], n_results=n_results)
+        return results['documents'][0] if results['documents'] else []
+    except Exception: return []
 
+def get_relevant_context(query, n_results=5):
+    try:
+        collection = db_client.get_or_create_collection("agent_memory")
+        results = collection.query(query_texts=[query], n_results=n_results)
+        return "\n".join(results['documents'][0]) if results['documents'] else ""
+    except Exception: return ""
 
-def store_embedding(text, source, text_type="code"):
-    """
-    Stores the embedding of a text segment in ChromaDB.
-    """
-    if not text.strip():
-        return
-
-    embedding = get_embedding(text)
-    if embedding:
-        # ChromaDB requires a unique ID for each entry.
-        # We can generate a simple one based on the source and a hash of the text.
-        doc_id = f"{source}-{hash(text)}"
+def store_conversation_turn(user_query, assistant_response, user_id):
+    try:
+        collection = db_client.get_or_create_collection("agent_memory")
+        doc_id = f"turn_{int(time.time())}"
         collection.add(
-            documents=[text],
-            embeddings=[embedding],
-            metadatas=[{"source": source, "type": text_type}],
-            ids=[doc_id],
+            documents=[f"User: {user_query}\nAssistant: {assistant_response}"],
+            metadatas=[{"user_id": user_id, "timestamp": time.time()}],
+            ids=[doc_id]
         )
+    except Exception as e: print(f"⚠️ DB Store Error: {e}")
 
-
-def get_relevant_context(
-    query, n_results=10, where_filter=None, lambda_mult=0.5, mmr_threshold=0.5
-):
-    """
-    Retrieves the most relevant context from ChromaDB using MMR for diversity.
-    """
-    query_embedding = get_embedding(query)
-    if not query_embedding:
-        return ""
-
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results * 5,
-        where=where_filter,
-        include=["documents", "embeddings"],
-    )
-
-    if not results or not results["documents"]:
-        return ""
-
-    docs = results["documents"][0]
-    embeddings = np.array(results["embeddings"][0])
-
-    if not docs:
-        return ""
-
-    # MMR algorithm
-    selected_indices = []
-    if docs:
-        remaining_indices = list(range(len(docs)))
-
-        # First, add the most relevant document
-        most_relevant_idx = remaining_indices[0]
-        selected_indices.append(most_relevant_idx)
-        remaining_indices.remove(most_relevant_idx)
-
-        while remaining_indices and len(selected_indices) < n_results:
-            mmr_scores = []
-            for i in remaining_indices:
-                similarity_to_query = cosine_similarity(
-                    [query_embedding], [embeddings[i]]
-                )[0][0]
-                max_similarity_to_selected = 0
-                if selected_indices:
-                    selected_embeddings = embeddings[selected_indices]
-                    similarities = cosine_similarity(
-                        [embeddings[i]], selected_embeddings
-                    )[0]
-                    max_similarity_to_selected = np.max(similarities)
-
-                mmr_score = (
-                    lambda_mult * similarity_to_query
-                    - (1 - lambda_mult) * max_similarity_to_selected
-                )
-                mmr_scores.append((mmr_score, i))
-
-            if not mmr_scores:
-                break
-
-            # Select the document with the highest MMR score
-            best_score, best_idx = max(mmr_scores, key=lambda x: x[0])
-            if best_score < mmr_threshold:
-                break
-
-            selected_indices.append(best_idx)
-            remaining_indices.remove(best_idx)
-
-    # Return the selected documents in the order they were selected
-    selected_docs = [docs[i] for i in selected_indices]
-    return "\n---\n".join(selected_docs)
-
-
-def get_available_metadata_sources():
-    """
-    Retrieves all unique 'source' values from the collection's metadata.
-    """
+def search_and_delete_history(query_text):
     try:
-        # get() with no IDs/where filter will return all items.
-        # We only need the metadata.
-        all_items = collection.get(include=["metadatas"])
-        sources = {
-            metadata["source"]
-            for metadata in all_items["metadatas"]
-            if "source" in metadata
-        }
-        return sorted(list(sources))
-    except Exception as e:
-        print(f"Error retrieving metadata sources: {e}")
-        return []
+        collection = db_client.get_or_create_collection("agent_memory")
+        results = collection.query(query_texts=[query_text], n_results=10)
+        if results['ids'] and len(results['ids'][0]) > 0:
+            collection.delete(ids=results['ids'][0])
+            return f"✅ Deleted {len(results['ids'][0])} history entries."
+        return "ℹ️ No matching history found."
+    except Exception: return "❌ Delete error."
 
+def store_embedding(text, metadata, collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        doc_id = hashlib.md5(text.encode()).hexdigest()
+        collection.upsert(documents=[text], metadatas=[metadata], ids=[doc_id])
+        return True
+    except Exception: return False
 
-def store_conversation_turn(user_query, model_response, user_id):
-    """
-    Stores a turn of the conversation in a separate ChromaDB collection.
-    """
-    turn_text = f"User: {user_query}\nModel: {model_response}"
-    embedding = get_embedding(turn_text)
-    if embedding:
-        turn_id = f"{user_id}-{hash(turn_text)}"
-        conversation_history_collection.add(
-            documents=[turn_text],
-            embeddings=[embedding],
-            metadatas=[{"user_id": user_id}],
-            ids=[turn_id],
-        )
+def query_embeddings(query_text, n_results=10, collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        return collection.query(query_texts=[query_text], n_results=n_results, include=["documents", "metadatas", "distances"])
+    except Exception: return None
 
+def search_and_delete_knowledge(query_text, collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        results = collection.query(query_texts=[query_text], n_results=10)
+        if results['ids'] and len(results['ids'][0]) > 0:
+            collection.delete(ids=results['ids'][0])
+            return "✅ Knowledge deleted."
+        return "ℹ️ Not found."
+    except Exception: return "❌ Delete error."
 
-def get_relevant_history(query, user_id, n_results=3):
-    """
-    Retrieves relevant conversation history for the current query.
-    """
-    query_embedding = get_embedding(query)
-    if not query_embedding:
-        return ""
+def update_embedding(doc_id, text=None, metadata=None, collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        collection.update(ids=[doc_id], documents=[text] if text else None, metadatas=[metadata] if metadata else None)
+        return True
+    except Exception: return False
 
-    results = conversation_history_collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results,
-        where={"user_id": user_id},
-    )
+def get_embedding(doc_id, collection_name="agent_learning"):
+    try: return db_client.get_collection(collection_name).get(ids=[doc_id])
+    except Exception: return None
 
-    if not results or not results["documents"]:
-        return ""
+def get_available_metadata_sources(collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        results = collection.get(include=["metadatas"])
+        return list(set(m.get('source') for m in results['metadatas'] if m.get('source'))) if results['metadatas'] else []
+    except Exception: return []
 
-    # Return the documents in chronological order (oldest first) as they are retrieved
-    # by relevance (most relevant first).
-    return "\n---\n".join(reversed(results["documents"][0]))
+def get_all_collections():
+    try: return db_client.list_collections()
+    except Exception: return []
 
+def get_collection_count(collection_name="agent_memory"):
+    try: return db_client.get_collection(collection_name).count()
+    except: return 0
 
-def search_and_delete_knowledge(query=None, source=None, ids=None, confirm=False):
-    """
-    Searches for and optionally deletes knowledge documents.
-    """
-    where_filter = {"source": source} if source else {}
-    if query:
-        query_embedding = get_embedding(query)
-        if not query_embedding:
-            return "Could not generate embedding for query."
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=10,
-            where=where_filter,
-            include=["metadatas", "documents"],
-        )
-        ids_to_delete = results["ids"][0]
-        if ids_to_delete and (confirm or user_confirm(f"Delete {len(ids_to_delete)} documents?")):
-            collection.delete(ids=ids_to_delete)
-            return f"Deleted {len(ids_to_delete)} documents."
-        elif ids_to_delete:
-            return "Deletion cancelled."
-        else:
-            return "No documents found to delete."
-    elif ids:
-        if confirm or user_confirm(f"Delete {len(ids)} documents?"):
-            collection.delete(ids=ids)
-            return f"Deleted {len(ids)} documents."
-        else:
-            return "Deletion cancelled."
-    else:
-        results = collection.get(where=where_filter, include=["metadatas", "documents"])
-
-    return "\n".join(
-        [
-            f"ID: {id}\nSource: {meta['source']}\nContent: {doc}\n"
-            for id, meta, doc in zip(
-                results["ids"], results["metadatas"], results["documents"]
-            )
-        ]
-    )
-
-
-def search_and_delete_history(query, role=None, ids=None, confirm=False):
-    """
-    Searches for and optionally deletes conversation history.
-    """
-    where_filter = {"role": role} if role else {}
-    if query:
-        query_embedding = get_embedding(query)
-        if not query_embedding:
-            return "Could not generate embedding for query."
-        results = conversation_history_collection.query(
-            query_embeddings=[query_embedding],
-            n_results=10,
-            where=where_filter,
-            include=["metadatas", "documents"],
-        )
-        ids_to_delete = results["ids"][0]
-        if ids_to_delete and (confirm or user_confirm(f"Delete {len(ids_to_delete)} history entries?")):
-            conversation_history_collection.delete(ids=ids_to_delete)
-            return f"Deleted {len(ids_to_delete)} history entries."
-        elif ids_to_delete:
-            return "Deletion cancelled."
-        else:
-            return "No history entries found to delete."
-    elif ids:
-        if confirm or user_confirm(f"Delete {len(ids)} history entries?"):
-            conversation_history_collection.delete(ids=ids)
-            return f"Deleted {len(ids)} history entries."
-        else:
-            return "Deletion cancelled."
-    else:
-        results = conversation_history_collection.get(
-            where=where_filter, include=["metadatas", "documents"]
-        )
-
-    return "\n".join(
-        [
-            f"ID: {id}\nUser ID: {meta['user_id']}\nContent: {doc}\n"
-            for id, meta, doc in zip(
-                results["ids"], results["metadatas"], results["documents"]
-            )
-        ]
-    )
+def delete_embeddings(collection_name="agent_learning"):
+    try: db_client.delete_collection(collection_name)
+    except Exception: pass

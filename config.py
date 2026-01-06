@@ -1,20 +1,20 @@
 import os
 
 # Gemini API Key
-API_KEY = os.environ.get("GEMINI_API_KEY", "")
+API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCoQzoXEzVCChFpdTZIvWTBAohZ_vnLw8Q")
 
 # ChromaDB Configuration
-CHROMA_HOST = "74.208.167.101"
+CHROMA_HOST = "localhost"
 CHROMA_PORT = 8000
 
 # Google Custom Search API Configuration
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "YOUR_GOOGLE_SEARCH_API_KEY")
-CUSTOM_SEARCH_CX = os.environ.get("CUSTOM_SEARCH_CX", "YOUR_CUSTOM_SEARCH_CX")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyCoQzoXEzVCChFpdTZIvWTBAohZ_vnLw8Q")
+CUSTOM_SEARCH_CX = os.environ.get("CUSTOM_SEARCH_CX", "d38dc547e6b1e426f")
 
 # Hugging Face API Token (for Inference API)
-HF_API_TOKEN = os.environ.get("HF_API_TOKEN", "YOUR_HUGGINGFACE_API_TOKEN")
+HF_API_TOKEN = os.environ.get("HF_API_TOKEN", "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")
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.5-flash"
 IMAGE_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "gemini_generated_images")
 
 SAFETY_SETTINGS = [

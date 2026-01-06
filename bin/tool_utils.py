@@ -1,8 +1,5 @@
 from tools_mod.web import *
 from tools_mod.memory import *
-from tools_mod.automation.ui import *
-from tools_mod.automation.browser import *
-from tools_mod.automation.droidrun import *
 from tools_mod.database import *
 from tools_mod.git import *
 from tools_mod.file_ops import *
@@ -18,7 +15,6 @@ def execute_tool(function_call, models):
     """
     name = function_call.name
     args = function_call.args
-
     print(f"🛠️ Executing tool: {name}")
 
     try:
@@ -32,21 +28,21 @@ def execute_tool(function_call, models):
             return learn_repo_task(args["repo_url"])
         elif name == "get_relevant_context":
             return get_relevant_context(args["query"])
+        
         # AUTOMATION
-        elif name == "open_app":
-            return open_app(args["package_name"])
-        elif name == "tap_text":
-            return tap_text(args["text"], args.get("timeout", 10))
-        elif name == "long_press_text":
-            return long_press_text(
-                args["text"], args.get("duration", 1.0), args.get("timeout", 10)
-            )
-        elif name == "extract_text_from_screen":
-            return extract_text_from_screen()
-        elif name == "execute_droidrun_command":
-            return execute_droidrun_command(args["command"])
-        elif name == "droidrun_portal_adb_command":
-            return droidrun_portal_adb_command(args["command"])
+      #  elif name == "open_app":
+         #   return open_app(args["package_name"])
+      #  elif name == "tap_text":
+           # return tap_text(args["text"], args.get("timeout", 10))
+        #elif name == "long_press_text":
+       #     return long_press_text(args["text"], args.get("duration", 1.0), args.get("timeout", 10))
+      #  elif name == "extract_text_from_screen":
+          #  return extract_text_from_screen()
+        #elif name == "execute_droidrun_command":
+       #     return execute_droidrun_command(args["command"])
+       # elif name == "droidrun_portal_adb_command":
+       #     return droidrun_portal_adb_command(args["command"])
+        
         # GIT
         elif name == "git_status":
             return git_status_task()
