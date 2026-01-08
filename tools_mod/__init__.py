@@ -1,6 +1,5 @@
 from .memory import tool_definitions as memory_tools, execute_memory_tool
 from .database import tool_definitions as database_tools, execute_database_tool
-from .code_tools import tool_definitions as code_tools, execute_code_tool
 
 def get_all_tool_definitions():
     """
@@ -10,7 +9,6 @@ def get_all_tool_definitions():
     # We call these because the sub-modules define them as functions
     all_tools.extend(memory_tools())
     all_tools.extend(database_tools())
-    all_tools.extend(code_tools())
     return all_tools
 
 # 1. Export as a list (for logic that expects a mapping/list)
@@ -28,6 +26,4 @@ def execute_tool(name, args):
         return execute_memory_tool(name, args)
     if name in [t['name'] for t in database_tools()]:
         return execute_database_tool(name, args)
-    if name in [t['name'] for t in code_tools()]:
-        return execute_code_tool(name, args)
     return f"Tool {name} not found."
