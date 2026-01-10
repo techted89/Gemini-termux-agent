@@ -54,6 +54,14 @@ def learn_repo_task():
 
     return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
 
+from utils.learning import learn_directory, learn_url
+
+def learn_directory_task(path):
+    return learn_directory(path)
+
+def learn_url_task(url):
+    return learn_url(url)
+
 def tool_definitions():
     return [
         genai_types.Tool(
@@ -65,7 +73,25 @@ def tool_definitions():
                         type=genai_types.Type.OBJECT,
                         properties={}, # No parameters
                     ),
-                )
+                ),
+                genai_types.FunctionDeclaration(
+                    name="learn_directory",
+                    description="Learn a directory by embedding its files.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="learn_url",
+                    description="Learn a URL by embedding its content.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"url": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["url"],
+                    ),
+                ),
             ]
         )
     ]

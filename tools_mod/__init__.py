@@ -1,7 +1,9 @@
 from .memory import tool_definitions as memory_tools, execute_memory_tool
 from .database import tool_definitions as database_tools, execute_database_tool
-from .learning import tool_definitions as learning_tools, learn_repo_task
+from .learning import tool_definitions as learning_tools, learn_repo_task, learn_directory_task, learn_url_task
 from .file_ops import tool_definitions as file_op_tools, stat_task, chmod_task
+from utils.file_system import save_to_file
+from .display import tool_definitions as display_tools, display_image_task
 
 def get_all_tool_definitions():
     """
@@ -13,6 +15,7 @@ def get_all_tool_definitions():
     all_tools.extend(database_tools())
     all_tools.extend(learning_tools())
     all_tools.extend(file_op_tools())
+    all_tools.extend(display_tools())
     return all_tools
 
 # 1. Export as a list (for logic that expects a mapping/list)
@@ -31,10 +34,20 @@ def execute_tool(name, args):
     if name in [t['name'] for t in database_tools()]:
         return execute_database_tool(name, args)
     if name in [t['name'] for t in learning_tools()]:
-        return learn_repo_task()
+        if name == "learn_repo":
+            return learn_repo_task()
+        elif name == "learn_directory":
+            return learn_directory_task(args['path'])
+        elif name == "learn_url":
+            return learn_url_task(args['url'])
     if name in [t['name'] for t in file_op_tools()]:
         if name == "stat":
             return stat_task(args['path'])
         elif name == "chmod":
             return chmod_task(args['path'], args['mode'])
+        elif name == "save_to_file":
+            return save_to_file(args['filename'], args['content'])
+    if name in [t['name'] for t in display_tools()]:
+        if name == "display_image":
+            return display_image_task(args['path'])
     return f"Tool {name} not found."

@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass
 
-db_client = chromadb.HttpClient(host='localhost', port=8000)
+db_client = chromadb.PersistentClient(path="/app/chroma_db")
 
 def get_relevant_history(query, n_results=15):
     try:
