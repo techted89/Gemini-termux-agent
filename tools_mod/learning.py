@@ -1,21 +1,26 @@
 import os
 import subprocess
+import fnmatch
 import google.genai as genai
 from google.genai import types as genai_types
 from utils.database import store_embedding
 import config
+from utils.learning import learn_directory, learn_url
 
 def _get_ignored_patterns():
     """Helper to read patterns from .gitignore and config."""
     ignored = set(config.PROJECT_CONTEXT_IGNORE)
     try:
-        with open(".gitignore", "r") as f:
+        # Find the repo root
+        repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).strip().decode('utf-8')
+        gitignore_path = os.path.join(repo_root, ".gitignore")
+        with open(gitignore_path, "r") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):
                     ignored.add(line)
-    except FileNotFoundError:
-        pass  # No .gitignore, no problem
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass  # No .gitignore or not a git repo, no problem
     return ignored
 
 def learn_repo_task():
@@ -38,7 +43,7 @@ def learn_repo_task():
     stored_count = 0
     for filepath in files:
         # Extra check for patterns not in .gitignore
-        if any(p in filepath for p in ignored_patterns if p != ""):
+        if any(fnmatch.fnmatch(filepath, p) for p in ignored_patterns if p != ""):
             continue
 
         try:
@@ -50,11 +55,9 @@ def learn_repo_task():
             store_embedding(content, metadata, collection_name="agent_learning")
             stored_count += 1
         except Exception as e:
-            logging.error(f"Could not process {filepath}: {e}")
+            print(f"Could not process {filepath}: {e}")
 
     return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
-
-from utils.learning import learn_directory, learn_url
 
 def learn_directory_task(path):
     return learn_directory(path)
