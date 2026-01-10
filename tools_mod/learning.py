@@ -50,7 +50,7 @@ def learn_repo_task():
             store_embedding(content, metadata, collection_name="agent_learning")
             stored_count += 1
         except Exception as e:
-            print(f"Could not process {filepath}: {e}")
+            logging.error(f"Could not process {filepath}: {e}")
 
     return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
 
