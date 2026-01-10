@@ -1,0 +1,80 @@
+version: 1.0
+# Gemini Code Assist Configuration for Gemini-Termux-Agent
+
+# ------------------------------------------------------------------
+# 1. Review Triggers & Automation
+# ------------------------------------------------------------------
+review:
+  auto_review:
+    enabled: true
+    events: ["pull_request", "pull_request_synchronize"]
+    branches: ["main", "dev", "feature/*"]
+
+  # Enables the agent to perform actions when you comment "Fix this"
+  interactive_mode:
+    enabled: true
+    commands:
+      - "/fix"
+      - "/review"
+      - "/explain"
+    
+    # CRITICAL: Instructions for automated commits
+    commit_behavior:
+      allow_direct_commits: true
+      commit_prefix: "fix(gemini-tool):"
+      sign_commits: true
+
+# ------------------------------------------------------------------
+# 2. Response & Code Quality Standards
+# ------------------------------------------------------------------
+response:
+  # STRICT: Prevents placeholders like "..." or "// code here"
+  completeness: "full_code_block" 
+  
+  # Matches your interface setting request
+  severity_threshold: "low" # Reports minor style issues + critical bugs
+  language: "en_US"
+
+style:
+  # Points explicitly to the guide created in the previous step
+  styleguide_path: ".gemini/styleguide.md"
+  
+  # Enforces 100 char limit (overriding standard PEP8 79 chars)
+  line_length: 100
+  
+  # Python version target for the Ubuntu/Termux environment
+  python_version: "3.11"
+
+# ------------------------------------------------------------------
+# 3. Environment & Scope
+# ------------------------------------------------------------------
+scope:
+  # Directories to ALWAYS review for cross-platform compatibility
+  include_paths:
+    - "agent_core/**"
+    
+    
+
+  # Directories to IGNORE to save context tokens
+  exclude_paths:
+    - "**/*.lock"
+    - "**/__pycache__/**"
+    - "node_modules/**"
+    - "venv/**"
+    - "docs/images/**"
+    - "chroma_db_data/**" # Prevent agent from scanning raw vector data
+
+# ------------------------------------------------------------------
+# 4. Agent Knowledge Context
+# ------------------------------------------------------------------
+knowledge:
+  # Reminds the tool of the specific package managers in use
+  environment_context:
+    - "termux: supports pkg, apt, apt-get"
+    - "ubuntu: supports apt, apt-get, sudo"
+    
+  # Protects critical RAG components from "simplification" suggestions
+  critical_components:
+    - "chromadb_client"
+    - "memory_vector_store"
+    - "android_api_bridge"
