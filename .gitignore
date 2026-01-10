@@ -17,3 +17,12 @@ local.properties
 # Python
 __pycache__/
 *.pyc
+
+# Logs
+*.log
+
+# Temporary files
+temp_requirements.txt
+
+# ChromaDB
+chroma_db/
