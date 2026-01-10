@@ -1,54 +1,43 @@
-import google.genai as genai
 from utils.database import (
-    search_and_delete_knowledge,
     search_and_delete_history,
+    search_and_delete_knowledge,
     get_available_metadata_sources,
+    get_collection_count
 )
 
-tool_definitions = {
-    "search_and_delete_knowledge": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="search_and_delete_knowledge",
-                description="Search/Del Knowledge",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string"},
-                        "source": {"type": "string"},
-                        "ids": {"type": "array", "items": {"type": "string"}},
-                        "confirm": {"type": "boolean"},
-                    },
-                    "required": [],
+def tool_definitions():
+    return [
+        {
+            "name": "manage_knowledge",
+            "description": "Search and delete specific knowledge or history entries.",
+            "parameters": {
+                "type": "OBJECT",
+                "properties": {
+                    "action": {"type": "STRING", "enum": ["delete_history", "delete_knowledge"]},
+                    "query": {"type": "STRING", "description": "The search term to match for deletion"}
                 },
-            )
-        ]
-    ),
-    "search_and_delete_history": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="search_and_delete_history",
-                description="Search/Del History",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string"},
-                        "role": {"type": "string"},
-                        "ids": {"type": "array", "items": {"type": "string"}},
-                        "confirm": {"type": "boolean"},
-                    },
-                    "required": [],
-                },
-            )
-        ]
-    ),
-    "get_available_metadata_sources": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="get_available_metadata_sources",
-                description="Get available metadata sources for filtering.",
-                parameters={"type": "object", "properties": {}},
-            )
-        ]
-    ),
-}
+                "required": ["action", "query"]
+            }
+        },
+        {
+            "name": "get_db_stats",
+            "description": "Get statistics about the memory and knowledge base.",
+            "parameters": {"type": "OBJECT", "properties": {}}
+        }
+    ]
+
+def execute_database_tool(name, args):
+    if name == "manage_knowledge":
+        action = args.get("action")
+        query = args.get("query")
+        if action == "delete_history":
+            return search_and_delete_history(query)
+        elif action == "delete_knowledge":
+            return search_and_delete_knowledge(query)
+    elif name == "get_db_stats":
+        return {
+            "history_count": get_collection_count("agent_memory"),
+            "knowledge_count": get_collection_count("agent_learning"),
+            "sources": get_available_metadata_sources()
+        }
+    return "Unknown database tool action."
