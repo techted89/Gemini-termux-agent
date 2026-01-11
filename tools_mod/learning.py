@@ -6,6 +6,9 @@ from google.genai import types as genai_types
 from utils.database import store_embedding
 import config
 from utils.learning import learn_directory, learn_url
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _get_ignored_patterns():
     """Helper to read patterns from .gitignore and config."""
@@ -19,7 +22,8 @@ def _get_ignored_patterns():
                 line = line.strip()
                 if line and not line.startswith("#"):
                     ignored.add(line)
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        logger.error(f"Error getting .gitignore: {e}", exc_info=True)
         pass  # No .gitignore or not a git repo, no problem
     return ignored
 
@@ -54,8 +58,14 @@ def learn_repo_task():
             metadata = {"source": filepath}
             store_embedding(content, metadata, collection_name="agent_learning")
             stored_count += 1
+        except FileNotFoundError:
+            logger.error(f"File not found: {filepath}", exc_info=True)
+        except PermissionError:
+            logger.error(f"Permission denied for file: {filepath}", exc_info=True)
+        except UnicodeDecodeError:
+            logger.error(f"Unicode decode error for file: {filepath}", exc_info=True)
         except Exception as e:
-            print(f"Could not process {filepath}: {e}")
+            logger.exception(f"An unexpected error occurred while processing {filepath}: {e}")
 
     return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
 
