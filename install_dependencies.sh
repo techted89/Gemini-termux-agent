@@ -8,7 +8,7 @@ if [[ -d "$HOME/.termux" ]]; then
     pkg update -y
 
     # Install Python and essential build tools
-    pkg install -y python python-pip clang make
+    pkg install -y python python-pip clang make pkg-config libzmq
 
     # Install other system-level dependencies for Termux
     # (Add any Termux-specific packages here)
@@ -20,7 +20,7 @@ else
     sudo apt-get update
 
     # Install pip for Python 3 and other essential packages
-    sudo apt-get install -y python3-pip build-essential python3-dev
+    sudo apt-get install -y python3-pip build-essential python3-dev pkg-config libzmq3-dev
 
     # Install other system-level dependencies
     sudo apt-get install -y libgl1
