@@ -2,7 +2,7 @@ import os
 import difflib
 from utils.commands import run_command, user_confirm
 from utils.file_system import save_to_file
-from utils.display import display_image_termux
+from utils.display import display_image
 from api import call_gemini_api
 import config
 
@@ -108,7 +108,7 @@ def handle_image_generation(model, prompt):
             f"This is a placeholder for an image generated with the prompt: '{prompt}'"
         )
 
-    display_image_termux(filename)
+    display_image(filename)
 
     return f"Image saved to {filename}"
 

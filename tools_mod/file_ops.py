@@ -129,176 +129,173 @@ def decompress_archive_task(archive_path, destination_path):
 
 def open_in_external_editor_task(filepath):
     try:
-        cmd = f"termux-file-editor {shlex.quote(os.path.expanduser(filepath))}"
+        cmd = f"xdg-open {shlex.quote(os.path.expanduser(filepath))}"
         run_command(cmd, shell=True)
         return f"Opened {filepath} in external editor."
     except Exception as e:
         return f"Error: {e}"
 
+def stat_task(path):
+    """Gets file or directory status."""
+    try:
+        return run_command(f"stat {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
+    except Exception as e:
+        return f"Error: {e}"
 
-tool_definitions = {
-    "lint_python_file": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="lint_python_file",
-                description="Lint Python",
-                parameters={
-                    "type": "object",
-                    "properties": {"filepath": {"type": "string"}},
-                    "required": ["filepath"],
-                },
-            )
-        ]
-    ),
-    "format_code": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="format_code",
-                description="Format Python",
-                parameters={
-                    "type": "object",
-                    "properties": {"filepath": {"type": "string"}},
-                    "required": ["filepath"],
-                },
-            )
-        ]
-    ),
-    "apply_sed": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="apply_sed",
-                description="Apply Sed",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "filepath": {"type": "string"},
-                        "sed_expression": {"type": "string"},
-                    },
-                    "required": ["filepath", "sed_expression"],
-                },
-            )
-        ]
-    ),
-    "create_directory": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="create_directory",
-                description="Create Dir",
-                parameters={
-                    "type": "object",
-                    "properties": {"directory_path": {"type": "string"}},
-                    "required": ["directory_path"],
-                },
-            )
-        ]
-    ),
-    "list_directory_recursive": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="list_directory_recursive",
-                description="List Dir",
-                parameters={
-                    "type": "object",
-                    "properties": {"directory_path": {"type": "string"}},
-                    "required": ["directory_path"],
-                },
-            )
-        ]
-    ),
-    "copy_file": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="copy_file",
-                description="Copy File",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "source_path": {"type": "string"},
-                        "destination_path": {"type": "string"},
-                    },
-                    "required": ["source_path", "destination_path"],
-                },
-            )
-        ]
-    ),
-    "move_file": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="move_file",
-                description="Move File",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "source_path": {"type": "string"},
-                        "destination_path": {"type": "string"},
-                    },
-                    "required": ["source_path", "destination_path"],
-                },
-            )
-        ]
-    ),
-    "find_files": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="find_files",
-                description="Find Files",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "directory_path": {"type": "string"},
-                        "name_pattern": {"type": "string"},
-                        "content_pattern": {"type": "string"},
-                        "max_depth": {"type": "integer"},
-                    },
-                    "required": ["directory_path"],
-                },
-            )
-        ]
-    ),
-    "compress_path": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="compress_path",
-                description="Compress",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "source_path": {"type": "string"},
-                        "output_archive_path": {"type": "string"},
-                        "format": {"type": "string"},
-                    },
-                    "required": ["source_path", "output_archive_path"],
-                },
-            )
-        ]
-    ),
-    "decompress_archive": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="decompress_archive",
-                description="Decompress",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "archive_path": {"type": "string"},
-                        "destination_path": {"type": "string"},
-                    },
-                    "required": ["archive_path", "destination_path"],
-                },
-            )
-        ]
-    ),
-    "open_in_external_editor": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="open_in_external_editor",
-                description="Open Editor",
-                parameters={
-                    "type": "object",
-                    "properties": {"filepath": {"type": "string"}},
-                    "required": ["filepath"],
-                },
-            )
-        ]
-    ),
-}
+def chmod_task(path, mode):
+    """Changes file or directory permissions."""
+    try:
+        return run_command(f"chmod {mode} {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
+    except Exception as e:
+        return f"Error: {e}"
+
+from google.genai import types as genai_types
+
+def tool_definitions():
+    return [
+        genai_types.Tool(
+            function_declarations=[
+                genai_types.FunctionDeclaration(
+                    name="lint_python_file",
+                    description="Lint Python",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"filepath": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["filepath"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="format_code",
+                    description="Format Python",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"filepath": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["filepath"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="apply_sed",
+                    description="Apply Sed",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "filepath": genai_types.Schema(type=genai_types.Type.STRING),
+                            "sed_expression": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["filepath", "sed_expression"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="create_directory",
+                    description="Create Dir",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"directory_path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["directory_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="list_directory_recursive",
+                    description="List Dir",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"directory_path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["directory_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="copy_file",
+                    description="Copy File",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "source_path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "destination_path": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["source_path", "destination_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="move_file",
+                    description="Move File",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "source_path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "destination_path": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["source_path", "destination_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="find_files",
+                    description="Find Files",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "directory_path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "name_pattern": genai_types.Schema(type=genai_types.Type.STRING),
+                            "content_pattern": genai_types.Schema(type=genai_types.Type.STRING),
+                            "max_depth": genai_types.Schema(type=genai_types.Type.INTEGER),
+                        },
+                        required=["directory_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="compress_path",
+                    description="Compress",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "source_path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "output_archive_path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "format": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["source_path", "output_archive_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="decompress_archive",
+                    description="Decompress",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "archive_path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "destination_path": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["archive_path", "destination_path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="open_in_external_editor",
+                    description="Open Editor",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"filepath": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["filepath"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="stat",
+                    description="Get file or directory status.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="chmod",
+                    description="Change file or directory permissions.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "mode": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["path", "mode"],
+                    ),
+                ),
+            ]
+        )
+    ]

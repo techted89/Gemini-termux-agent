@@ -1,12 +1,13 @@
 import os
 from utils.database import store_embedding
 from urllib.parse import urlparse
+import config
 
 def learn_file_content(file_path, content):
     """
     Learns the content of a single file and stores its embedding.
     """
-    store_embedding(content, source=file_path, text_type="code")
+    store_embedding(content, {"source": file_path}, collection_name="agent_learning")
     print(f"  - Learned {file_path}")
 
 def is_valid_url(url):
@@ -32,7 +33,7 @@ def learn_url(url):
         content = scrape_text(url)
         if content:
             # We could chunk this for larger pages
-            store_embedding(content, source=url, text_type="webpage")
+            store_embedding(content, {"source": url}, collection_name="agent_learning")
             return f"Successfully learned content from {url}"
         else:
             return f"Could not retrieve content from {url}"
@@ -44,9 +45,6 @@ def learn_directory(path):
     """
     Recursively learns files in a directory and stores their embeddings.
     """
-    import os
-    import config
-
     path = os.path.expanduser(path)
 
     if not os.path.isdir(path):
