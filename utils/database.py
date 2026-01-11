@@ -5,6 +5,7 @@ import hashlib
 import chromadb
 from chromadb.config import Settings
 import config
+from pathlib import Path
 
 try:
     import pysqlite3
@@ -12,7 +13,15 @@ try:
 except ImportError:
     pass
 
-db_client = chromadb.HttpClient(host='localhost', port=8000)
+def _get_validated_db_path():
+    """Validates and returns the ChromaDB path."""
+    # Default to a relative path for portability
+    db_path = os.environ.get("CHROMA_DB_PATH", "chroma_db")
+    if not os.path.exists(db_path):
+        os.makedirs(db_path)
+    return db_path
+
+db_client = chromadb.PersistentClient(path=_get_validated_db_path())
 
 def get_relevant_history(query, n_results=15):
     try:

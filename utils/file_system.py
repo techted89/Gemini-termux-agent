@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 def save_to_file(filename, content):
     """Saves content to a file."""
     try:
