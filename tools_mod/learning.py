@@ -1,7 +1,7 @@
 import os
+import os
 import subprocess
-import fnmatch
-import google.genai as genai
+import logging
 from google.genai import types as genai_types
 from utils.database import store_embedding
 import config
