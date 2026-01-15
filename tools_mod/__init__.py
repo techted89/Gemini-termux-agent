@@ -38,26 +38,11 @@ def execute_tool(name, args):
     Executes a tool by name with the given arguments.
     """
     # 1. Modern Library Lookup
-    if hasattr(core, 'library') and name in core.library:
-        return core.library[name](**args)
+    modern_modules = [core, web, file_ops, git, nlp, debug_test, tool_creator]
+    for module in modern_modules:
+        if hasattr(module, 'library') and name in module.library:
+            return module.library[name](**args)
 
-    if hasattr(web, 'library') and name in web.library:
-        return web.library[name](**args)
-
-    if hasattr(file_ops, 'library') and name in file_ops.library:
-        return file_ops.library[name](**args)
-
-    if hasattr(git, 'library') and name in git.library:
-        return git.library[name](**args)
-
-    if hasattr(nlp, 'library') and name in nlp.library:
-        return nlp.library[name](**args)
-
-    if hasattr(debug_test, 'library') and name in debug_test.library:
-        return debug_test.library[name](**args)
-
-    if hasattr(tool_creator, 'library') and name in tool_creator.library:
-        return tool_creator.library[name](**args)
 
     # 2. Legacy / Special Cases
 
