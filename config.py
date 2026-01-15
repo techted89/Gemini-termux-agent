@@ -4,8 +4,10 @@ import os
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ChromaDB Configuration
+CHROMA_CLIENT_PROVIDER = "local" # "local" or "http"
 CHROMA_HOST = "localhost"
 CHROMA_PORT = 8000
+CHROMA_DB_PATH = "chroma_db"
 
 # Google Custom Search API Configuration
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
