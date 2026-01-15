@@ -128,12 +128,23 @@ def decompress_archive_task(archive_path, destination_path):
 
 
 def open_in_external_editor_task(filepath):
-    try:
-        cmd = f"xdg-open {shlex.quote(os.path.expanduser(filepath))}"
-        run_command(cmd, shell=True)
-        return f"Opened {filepath} in external editor."
-    except Exception as e:
-        return f"Error: {e}"
+    """Opens a file in an external editor, trying xdg-open first and falling back to termux-open."""
+    filepath = os.path.expanduser(filepath)
+    if shutil.which("xdg-open"):
+        try:
+            run_command(f"xdg-open {shlex.quote(filepath)}", shell=True)
+            return f"Opened {filepath} with xdg-open."
+        except Exception as e:
+            print(f"xdg-open failed: {e}")
+
+    if shutil.which("termux-open"):
+        try:
+            run_command(f"termux-open {shlex.quote(filepath)}", shell=True)
+            return f"Opened {filepath} with termux-open."
+        except Exception as e:
+            return f"Error with termux-open: {e}"
+
+    return "Error: Could not find a suitable command to open the file."
 
 def stat_task(path):
     """Gets file or directory status."""
@@ -145,7 +156,7 @@ def stat_task(path):
 def chmod_task(path, mode):
     """Changes file or directory permissions."""
     try:
-        return run_command(f"chmod {mode} {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
+        return run_command(["chmod", shlex.quote(mode), shlex.quote(os.path.expanduser(path))], check_output=True)
     except Exception as e:
         return f"Error: {e}"
 
@@ -294,6 +305,18 @@ def tool_definitions():
                             "mode": genai_types.Schema(type=genai_types.Type.STRING),
                         },
                         required=["path", "mode"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="save_to_file",
+                    description="Save content to a file.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "filename": genai_types.Schema(type=genai_types.Type.STRING),
+                            "content": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["filename", "content"],
                     ),
                 ),
             ]

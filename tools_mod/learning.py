@@ -2,7 +2,6 @@ import os
 import subprocess
 import fnmatch
 from google.genai import types as genai_types
-from google.genai import types as genai_types
 from utils.database import store_embedding
 import config
 from utils.learning import learn_directory, learn_url
