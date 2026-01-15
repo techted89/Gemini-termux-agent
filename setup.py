@@ -27,7 +27,14 @@ def setup_termux():
     """Interactive setup for Termux."""
     print("🚀 Termux environment detected. Configuring for client-server mode.")
     host = input("Enter the ChromaDB server IP address: ")
-    port = input("Enter the ChromaDB server port (default: 8000): ") or "8000"
+    port_str = input("Enter the ChromaDB server port (default: 8000): ") or "8000"
+    try:
+        port = int(port_str)
+    except ValueError:
+        error_msg = f"Invalid port number '{port_str}'. Using default 8000."
+        print(error_msg)
+        logging.error(error_msg)
+        port = 8000
 
     update_config("CHROMA_CLIENT_PROVIDER", "http")
     update_config("CHROMA_HOST", host)
