@@ -26,7 +26,7 @@ else
     sudo apt-get install -y libgl1
 
     # Install Python dependencies for Linux
-    pip3 install -r requirements-linux.txt
+    pip install -r requirements-linux.txt
 fi
 
 echo "✅ System dependencies and Python packages installed."

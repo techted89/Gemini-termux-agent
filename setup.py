@@ -11,41 +11,20 @@ def is_termux():
 def update_config(key, value):
     """Update a key in the config.py file."""
     with open("config.py", "r") as f:
-def update_config(key, value):
-    """Update a key in the config.py file."""
-    import re
-    try:
-        with open("config.py", "r") as f:
-            content = f.read()
-        
-        # Use regex for precise key matching
-        pattern = rf'^{re.escape(key)}\s*=.*$'
-        replacement = f'{key} = "{value}"'
-        new_content, count = re.subn(pattern, replacement, content, flags=re.MULTILINE)
-        
-        if count == 0:
-            print(f"⚠️ Warning: Key '{key}' not found in config.py")
-            return False
-        
-        with open("config.py", "w") as f:
-            f.write(new_content)
-        return True
-    except IOError as e:
-        print(f"❌ Error updating config: {e}")
-        return False
+        lines = f.readlines()
+
+    with open("config.py", "w") as f:
+        for line in lines:
+            if line.startswith(key):
+                f.write(f"{key} = \"{value}\"\n")
+            else:
+                f.write(line)
 
 def setup_termux():
     """Interactive setup for Termux."""
     print("🚀 Termux environment detected. Configuring for client-server mode.")
     host = input("Enter the ChromaDB server IP address: ")
-    port_str = input("Enter the ChromaDB server port (default: 8000): ") or "8000"
-    try:
-        port = int(port_str)
-    except ValueError:
-        error_msg = f"Invalid port number '{port_str}'. Using default 8000."
-        print(error_msg)
-        logging.error(error_msg)
-        port = 8000
+    port = input("Enter the ChromaDB server port (default: 8000): ") or "8000"
 
     update_config("CHROMA_CLIENT_PROVIDER", "http")
     update_config("CHROMA_HOST", host)
