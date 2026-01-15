@@ -7,7 +7,10 @@ from utils.file_system import save_to_file
 
 def get_all_tool_definitions():
     """
-    Returns a flat list of all tool definitions (Tools or Dicts).
+    Aggregate and return a flat list of tool definitions from both modern and legacy modules.
+    
+    Returns:
+        list: Tool definitions collected from core, web, file_ops, learning, memory, database, and display. Each item may be a Tool object or a dict.
     """
     all_tools = []
 
@@ -28,11 +31,24 @@ def get_all_tool_definitions():
 tool_definitions_list = get_all_tool_definitions()
 
 def tool_definitions():
+    """
+    Provide a cached list of all tool definitions available in the module.
+    
+    Returns:
+        list: The precomputed list of tool definition dictionaries aggregated from modern and legacy modules.
+    """
     return tool_definitions_list
 
 def execute_tool(name, args):
     """
-    Executes a tool by name with the given arguments.
+    Dispatches and runs a registered tool identified by name using the provided arguments.
+    
+    Parameters:
+        name (str): Name of the tool to execute.
+        args (dict): Mapping of keyword arguments to pass to the tool.
+    
+    Returns:
+        The result returned by the invoked tool, or the string "Tool {name} not found." when no matching tool exists.
     """
     # 1. Modern Library Lookup
     if hasattr(core, 'library') and name in core.library:
