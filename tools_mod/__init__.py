@@ -60,9 +60,15 @@ def execute_tool(name, args):
     if name == "learn_repo":
         return learn_repo_task()
     elif name == "learn_directory":
-        return learn_directory_task(args.get('path'))
+        path = args.get('path')
+        if not path:
+            return "Error: 'path' parameter is required for learn_directory."
+        return learn_directory_task(path)
     elif name == "learn_url":
-        return learn_url_task(args.get('url'))
+        url = args.get('url')
+        if not url:
+            return "Error: 'url' parameter is required for learn_url."
+        return learn_url_task(url)
 
     # Display Tools
     if name == "display_image":

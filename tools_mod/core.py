@@ -5,10 +5,10 @@ from utils.commands import run_command, user_confirm
 # --- Core Tools ---
 
 
-def execute_shell_command(cmd):
+def execute_shell_command(command):
     """Executes a shell command on the local system after user confirmation."""
-    if user_confirm(f"Run: {cmd}?"):
-        return run_command(cmd, shell=True, check_output=True)
+    if user_confirm(f"Run: {command}?"):
+        return run_command(command, shell=True, check_output=True)
     return "Denied."
 
 
