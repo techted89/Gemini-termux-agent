@@ -6,6 +6,7 @@ import fnmatch
 import re
 import google.genai as genai
 from utils.commands import run_command
+from google.genai import types as genai_types
 
 
 def lint_python_file_task(filepath, linter="flake8"):
@@ -182,7 +183,6 @@ def chmod_task(path, mode):
     except Exception as e:
         return f"Error: {e}"
 
-from google.genai import types as genai_types
 
 def tool_definitions():
     """
