@@ -16,7 +16,10 @@ def update_config(key, value):
     with open("config.py", "w") as f:
         for line in lines:
             if line.startswith(key):
-                f.write(f"{key} = \"{value}\"\n")
+                if isinstance(value, int):
+                    f.write(f"{key} = {value}\n")
+                else:
+                    f.write(f'{key} = "{value}"\n')
             else:
                 f.write(line)
 
