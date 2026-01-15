@@ -299,3 +299,19 @@ def tool_definitions():
             ]
         )
     ]
+
+library = {
+    "lint_python_file": lint_python_file_task,
+    "format_code": format_code_task,
+    "apply_sed": apply_sed_task,
+    "create_directory": create_directory_task,
+    "list_directory_recursive": list_directory_recursive_task,
+    "copy_file": copy_file_task,
+    "move_file": move_file_task,
+    "find_files": find_files_task,
+    "compress_path": compress_path_task,
+    "decompress_archive": decompress_archive_task,
+    "open_in_external_editor": open_in_external_editor_task,
+    "stat": stat_task,
+    "chmod": chmod_task,
+}
