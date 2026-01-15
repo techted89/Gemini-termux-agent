@@ -17,11 +17,17 @@ def _get_validated_db_path():
     """Validates and returns the ChromaDB path."""
     # Default to a relative path for portability
     db_path = os.environ.get("CHROMA_DB_PATH", "chroma_db")
-    if not os.path.exists(db_path):
-        os.makedirs(db_path)
+    # Atomic creation to avoid TOCTOU race
+    os.makedirs(db_path, exist_ok=True)
     return db_path
 
-db_client = chromadb.PersistentClient(path=_get_validated_db_path())
+def _init_db_client():
+    """Initializes the ChromaDB client with logging."""
+    path = _get_validated_db_path()
+    print(f"Initializing ChromaDB PersistentClient at: {path}")
+    return chromadb.PersistentClient(path=path)
+
+db_client = _init_db_client()
 
 def get_relevant_history(query, n_results=15):
     try:

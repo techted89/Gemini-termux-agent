@@ -36,36 +36,40 @@ def google_search(
     )
 
 
-tool_definitions = {
-    "google_search": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="google_search",
-                description="Performs a Google search.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "The search query."}
+def tool_definitions():
+    return [
+        genai.types.Tool(
+            function_declarations=[
+                genai.types.FunctionDeclaration(
+                    name="google_search",
+                    description="Performs a Google search.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string", "description": "The search query."}
+                        },
+                        "required": ["query"],
                     },
-                },
-            )
-        ]
-    ),
-    "scrape_text": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="scrape_text",
-                description="Scrapes the text content from a given URL.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "The URL to scrape.",
-                        }
+                ),
+                genai.types.FunctionDeclaration(
+                    name="scrape_text",
+                    description="Scrapes the text content from a given URL.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "The URL to scrape.",
+                            }
+                        },
+                        "required": ["url"],
                     },
-                },
-            )
-        ]
-    ),
+                ),
+            ]
+        )
+    ]
+
+library = {
+    "google_search": google_search,
+    "scrape_text": scrape_text,
 }

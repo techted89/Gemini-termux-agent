@@ -6,6 +6,7 @@ import fnmatch
 import re
 import google.genai as genai
 from utils.commands import run_command
+from utils.file_system import save_to_file
 
 
 def lint_python_file_task(filepath, linter="flake8"):
@@ -128,12 +129,28 @@ def decompress_archive_task(archive_path, destination_path):
 
 
 def open_in_external_editor_task(filepath):
+    """
+    Opens a file in an external editor, trying xdg-open first then termux-open.
+    """
     try:
-        cmd = f"xdg-open {shlex.quote(os.path.expanduser(filepath))}"
-        run_command(cmd, shell=True)
-        return f"Opened {filepath} in external editor."
+        expanded_path = shlex.quote(os.path.expanduser(filepath))
+
+        # Try xdg-open first
+        try:
+             cmd = f"xdg-open {expanded_path}"
+             run_command(cmd, shell=True, check_output=True)
+             return f"Opened {filepath} with xdg-open."
+        except Exception as xdg_error:
+             # Fallback to termux-open
+             if shutil.which("termux-open"):
+                 cmd = f"termux-open {expanded_path}"
+                 run_command(cmd, shell=True, check_output=True)
+                 return f"Opened {filepath} with termux-open (xdg-open failed: {xdg_error})."
+             else:
+                 return f"Failed to open {filepath}. xdg-open failed: {xdg_error}. termux-open not found."
+
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error opening file: {e}"
 
 def stat_task(path):
     """Gets file or directory status."""
@@ -145,9 +162,16 @@ def stat_task(path):
 def chmod_task(path, mode):
     """Changes file or directory permissions."""
     try:
-        return run_command(f"chmod {mode} {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
+        # Sanitize mode to prevent command injection
+        safe_mode = shlex.quote(mode)
+        safe_path = shlex.quote(os.path.expanduser(path))
+        return run_command(f"chmod {safe_mode} {safe_path}", shell=True, check_output=True)
     except Exception as e:
         return f"Error: {e}"
+
+def save_to_file_task(filename, content):
+    """Wrapper for saving to file."""
+    return save_to_file(filename, content)
 
 from google.genai import types as genai_types
 
@@ -296,6 +320,35 @@ def tool_definitions():
                         required=["path", "mode"],
                     ),
                 ),
+                genai_types.FunctionDeclaration(
+                    name="save_to_file",
+                    description="Save content to a file.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "filename": genai_types.Schema(type=genai_types.Type.STRING),
+                            "content": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["filename", "content"],
+                    ),
+                ),
             ]
         )
     ]
+
+library = {
+    "lint_python_file": lint_python_file_task,
+    "format_code": format_code_task,
+    "apply_sed": apply_sed_task,
+    "create_directory": create_directory_task,
+    "list_directory_recursive": list_directory_recursive_task,
+    "copy_file": copy_file_task,
+    "move_file": move_file_task,
+    "find_files": find_files_task,
+    "compress_path": compress_path_task,
+    "decompress_archive": decompress_archive_task,
+    "open_in_external_editor": open_in_external_editor_task,
+    "stat": stat_task,
+    "chmod": chmod_task,
+    "save_to_file": save_to_file_task,
+}
