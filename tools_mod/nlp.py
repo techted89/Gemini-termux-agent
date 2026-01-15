@@ -3,6 +3,10 @@ import requests
 from config import HF_API_TOKEN
 
 
+# Initialize a global session for connection pooling
+_session = requests.Session()
+
+
 def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
     """
     Calculates sentence similarity using the Hugging Face Inference API.
@@ -25,7 +29,8 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
     if not HF_API_TOKEN or HF_API_TOKEN == "YOUR_HUGGINGFACE_API_TOKEN":
         return "Error: HF_API_TOKEN is not set in config.py. Please get a token from hf.co/settings/tokens."
 
-    api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+    # Note: api-inference.huggingface.co returns 410 Gone and instructs to use router.huggingface.co
+    api_url = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2"
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
     payload = {
@@ -36,7 +41,7 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
     }
 
     try:
-        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+        response = _session.post(api_url, headers=headers, json=payload, timeout=20)
         if response.status_code == 200:
             scores = response.json()
             return f"Similarity scores: {scores}"
