@@ -1,11 +1,15 @@
 import os
 import subprocess
 import fnmatch
+import google.genai as genai
 from google.genai import types as genai_types
-from utils.database import store_embeddings
 import config
-from utils.learning import learn_directory, learn_url, is_binary_file
-from utils.chunking import chunk_text
+from utils.learning import (
+    learn_directory,
+    learn_url,
+    learn_file_content,
+    is_binary_file,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,9 +57,6 @@ def learn_repo_task():
                 files.append(os.path.join(root, filename))
 
     files_processed = 0
-    batch_texts = []
-    batch_metadatas = []
-    BATCH_SIZE = 100
 
     for filepath in files:
         # Extra check for patterns not in .gitignore
@@ -70,20 +71,9 @@ def learn_repo_task():
             with open(filepath, "r", errors="ignore") as f:
                 content = f.read()
 
-            chunks = chunk_text(content)
-            for i, chunk in enumerate(chunks):
-                batch_texts.append(chunk)
-                batch_metadatas.append({"source": filepath, "chunk_index": i})
-
+            # Delegate to robust learning function (handles deletion + chunking)
+            learn_file_content(filepath, content)
             files_processed += 1
-
-            # Flush batch
-            if len(batch_texts) >= BATCH_SIZE:
-                store_embeddings(
-                    batch_texts, batch_metadatas, collection_name="agent_learning"
-                )
-                batch_texts = []
-                batch_metadatas = []
 
         except FileNotFoundError:
             logger.error(f"File not found: {filepath}", exc_info=True)
@@ -96,21 +86,20 @@ def learn_repo_task():
                 f"An unexpected error occurred while processing {filepath}: {e}"
             )
 
-    # Flush remaining
-    if batch_texts:
-        store_embeddings(batch_texts, batch_metadatas, collection_name="agent_learning")
-
-    return (
-        f"Successfully processed {files_processed} files in the 'agent_learning' collection."
-    )
+    return f"Successfully processed {files_processed} files in the 'agent_learning' collection."
 
 
 def learn_directory_task(path):
     return learn_directory(path)
 
 
-def learn_url_task(url):
-    return learn_url(url)
+def learn_url_task(url, depth=0):
+    # Ensure depth is an int
+    try:
+        depth = int(depth)
+    except:
+        depth = 0
+    return learn_url(url, depth=depth)
 
 
 def tool_definitions():
@@ -138,11 +127,15 @@ def tool_definitions():
                 ),
                 genai_types.FunctionDeclaration(
                     name="learn_url",
-                    description="Learn a URL by embedding its content.",
+                    description="Learn a URL by embedding its content. Supports recursive crawling with depth.",
                     parameters=genai_types.Schema(
                         type=genai_types.Type.OBJECT,
                         properties={
-                            "url": genai_types.Schema(type=genai_types.Type.STRING)
+                            "url": genai_types.Schema(type=genai_types.Type.STRING),
+                            "depth": genai_types.Schema(
+                                type=genai_types.Type.INTEGER,
+                                description="Recursion depth (default 0)",
+                            ),
                         },
                         required=["url"],
                     ),

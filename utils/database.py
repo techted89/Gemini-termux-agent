@@ -169,3 +169,16 @@ def delete_embeddings(collection_name="agent_learning"):
         db_client.delete_collection(collection_name)
     except Exception:
         pass
+
+
+def delete_by_metadata(key, value, collection_name="agent_learning"):
+    """
+    Deletes documents where metadata[key] == value.
+    """
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        collection.delete(where={key: value})
+        return True
+    except Exception as e:
+        print(f"Error deleting by metadata: {e}")
+        return False
