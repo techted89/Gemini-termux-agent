@@ -15,11 +15,32 @@ try:
 except ImportError:
     pass
 
+import logging
+
 logger = logging.getLogger(__name__)
 
 def get_db_client():
     """Initializes and returns the ChromaDB client based on config."""
     provider = getattr(config, "CHROMA_CLIENT_PROVIDER", "local")
+
+    if provider == "http":
+        logger.info(f"Initializing ChromaDB HttpClient with host={config.CHROMA_HOST}, port={config.CHROMA_PORT}")
+        return chromadb.HttpClient(host=config.CHROMA_HOST, port=config.CHROMA_PORT)
+    else:
+        # Default to local, persistent client
+        db_path = getattr(config, "CHROMA_DB_PATH", "chroma_db")
+        os.makedirs(db_path, exist_ok=True)
+        logger.info(f"Initializing ChromaDB PersistentClient with path={db_path}")
+        return chromadb.PersistentClient(path=db_path)
+
+db_client = get_db_client()
+def _get_validated_db_path():
+    """Validates and returns the ChromaDB path."""
+    # Default to a relative path for portability
+    db_path = os.environ.get("CHROMA_DB_PATH", "chroma_db")
+    if not os.path.exists(db_path):
+        os.makedirs(db_path)
+    return db_path
 
     if provider == "http":
         logger.info(f"Initializing ChromaDB HttpClient with host={config.CHROMA_HOST}, port={config.CHROMA_PORT}")
