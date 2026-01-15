@@ -48,24 +48,29 @@ def huggingface_sentence_similarity(source_sentence, sentences_to_compare):
         return f"Error making request to Hugging Face API: {e}"
 
 
-tool_definitions = {
-    "huggingface_sentence_similarity": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="huggingface_sentence_similarity",
-                description="Calculates sentence similarity using the Hugging Face Inference API.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "source_sentence": {"type": "string"},
-                        "sentences_to_compare": {
-                            "type": "array",
-                            "items": {"type": "string"},
+def tool_definitions():
+    return [
+        genai.types.Tool(
+            function_declarations=[
+                genai.types.FunctionDeclaration(
+                    name="huggingface_sentence_similarity",
+                    description="Calculates sentence similarity using the Hugging Face Inference API.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "source_sentence": {"type": "string"},
+                            "sentences_to_compare": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
                         },
+                        "required": ["source_sentence", "sentences_to_compare"],
                     },
-                    "required": ["source_sentence", "sentences_to_compare"],
-                },
-            )
-        ]
-    ),
+                )
+            ]
+        )
+    ]
+
+library = {
+    "huggingface_sentence_similarity": huggingface_sentence_similarity,
 }

@@ -48,18 +48,23 @@ def run_tests(filepath):
     return results
 
 
-tool_definitions = {
-    "run_tests": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="run_tests",
-                description="Runs tests, lints, and formats a Python file.",
-                parameters={
-                    "type": "object",
-                    "properties": {"filepath": {"type": "string"}},
-                    "required": ["filepath"],
-                },
-            )
-        ]
-    )
+def tool_definitions():
+    return [
+        genai.types.Tool(
+            function_declarations=[
+                genai.types.FunctionDeclaration(
+                    name="run_tests",
+                    description="Runs tests, lints, and formats a Python file.",
+                    parameters={
+                        "type": "object",
+                        "properties": {"filepath": {"type": "string"}},
+                        "required": ["filepath"],
+                    },
+                )
+            ]
+        )
+    ]
+
+library = {
+    "run_tests": run_tests,
 }

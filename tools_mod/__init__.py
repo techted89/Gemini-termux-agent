@@ -1,4 +1,4 @@
-from . import core, web, file_ops, memory, database, learning, display
+from . import core, web, file_ops, memory, database, learning, display, git, nlp, debug_test
 from .memory import execute_memory_tool
 from .database import execute_database_tool
 from .display import display_image_task
@@ -15,6 +15,9 @@ def get_all_tool_definitions():
     all_tools.extend(web.tool_definitions())
     all_tools.extend(file_ops.tool_definitions())
     all_tools.extend(learning.tool_definitions())
+    all_tools.extend(git.tool_definitions())
+    all_tools.extend(nlp.tool_definitions())
+    all_tools.extend(debug_test.tool_definitions())
 
     # Legacy Modules (Return List[Dict] or List[Tool])
     all_tools.extend(memory.tool_definitions())
@@ -42,6 +45,15 @@ def execute_tool(name, args):
 
     if hasattr(file_ops, 'library') and name in file_ops.library:
         return file_ops.library[name](**args)
+
+    if hasattr(git, 'library') and name in git.library:
+        return git.library[name](**args)
+
+    if hasattr(nlp, 'library') and name in nlp.library:
+        return nlp.library[name](**args)
+
+    if hasattr(debug_test, 'library') and name in debug_test.library:
+        return debug_test.library[name](**args)
 
     # 2. Legacy / Special Cases
 

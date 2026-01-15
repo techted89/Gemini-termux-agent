@@ -25,53 +25,49 @@ def git_branch_task(new_branch_name=None):
     return run_command("git branch", shell=True, check_output=True)
 
 
-tool_definitions = {
-    "git_status": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="git_status",
-                description="Git Status",
-                parameters={"type": "object", "properties": {}},
-            )
-        ]
-    ),
-    "git_pull": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="git_pull",
-                description="Git Pull",
-                parameters={
-                    "type": "object",
-                    "properties": {"branch": {"type": "string"}},
-                    "required": [],
-                },
-            )
-        ]
-    ),
-    "git_push": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="git_push",
-                description="Git Push",
-                parameters={
-                    "type": "object",
-                    "properties": {"branch": {"type": "string"}},
-                    "required": [],
-                },
-            )
-        ]
-    ),
-    "git_branch": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="git_branch",
-                description="Git Branch",
-                parameters={
-                    "type": "object",
-                    "properties": {"new_branch_name": {"type": "string"}},
-                    "required": [],
-                },
-            )
-        ]
-    ),
+def tool_definitions():
+    return [
+        genai.types.Tool(
+            function_declarations=[
+                genai.types.FunctionDeclaration(
+                    name="git_status",
+                    description="Git Status",
+                    parameters={"type": "object", "properties": {}},
+                ),
+                genai.types.FunctionDeclaration(
+                    name="git_pull",
+                    description="Git Pull",
+                    parameters={
+                        "type": "object",
+                        "properties": {"branch": {"type": "string"}},
+                        "required": [],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="git_push",
+                    description="Git Push",
+                    parameters={
+                        "type": "object",
+                        "properties": {"branch": {"type": "string"}},
+                        "required": [],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="git_branch",
+                    description="Git Branch",
+                    parameters={
+                        "type": "object",
+                        "properties": {"new_branch_name": {"type": "string"}},
+                        "required": [],
+                    },
+                ),
+            ]
+        )
+    ]
+
+library = {
+    "git_status": git_status_task,
+    "git_pull": git_pull_task,
+    "git_push": git_push_task,
+    "git_branch": git_branch_task,
 }
