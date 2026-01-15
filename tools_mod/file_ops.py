@@ -152,6 +152,14 @@ def chmod_task(path, mode):
 from google.genai import types as genai_types
 
 def tool_definitions():
+    """
+    Declare and return GenAI tool metadata for the available filesystem and code utility tasks.
+    
+    The returned structure contains a single genai_types.Tool with FunctionDeclaration entries for each exposed task (linting, formatting, file operations, compression, search, and system status). Each declaration includes the function name, a short description, and a JSON schema describing its parameters and required fields.
+    
+    Returns:
+        tools (list[genai_types.Tool]): A list containing the tool descriptor that registers all available function declarations for use by the GenAI integration.
+    """
     return [
         genai_types.Tool(
             function_declarations=[

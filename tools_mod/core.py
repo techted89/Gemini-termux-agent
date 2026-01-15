@@ -40,7 +40,15 @@ def read_file_task(filepath):
 
 
 def install_packages(packages: list[str]):
-    """Installs a list of packages using apt-get after user confirmation."""
+    """
+    Install Debian/Ubuntu packages via `apt-get` after asking the user for confirmation.
+    
+    Parameters:
+        packages (list[str]): List of package names to install.
+    
+    Returns:
+        The command output string when installation is run, `"Denied."` if the user declines, or an error string if `packages` is not a list.
+    """
     if not isinstance(packages, list):
         return "Error: a list of package names is required."
 
@@ -53,6 +61,14 @@ def install_packages(packages: list[str]):
 
 
 def tool_definitions():
+    """
+    Provide GenAI Tool declarations describing the module's callable utilities.
+    
+    Each returned Tool contains FunctionDeclaration entries for the available functions (install_packages, execute_shell_command, create_file, and read_file) including their parameter schemas.
+    
+    Returns:
+        list: A list of genai.types.Tool objects defining the module's tool functions for GenAI integration.
+    """
     return [
         genai.types.Tool(
             function_declarations=[
