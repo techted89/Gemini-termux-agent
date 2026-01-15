@@ -10,8 +10,8 @@ if [[ -d "$HOME/.termux" ]]; then
     # Install Python and essential build tools
     pkg install -y python python-pip clang make pkg-config libzmq
 
-    # Install other system-level dependencies for Termux
-    # (Add any Termux-specific packages here)
+    # Install Python dependencies for Termux
+    pip install -r requirements-termux.txt
 
 else
     echo "🐧 Linux environment detected. Installing Linux dependencies."
@@ -24,6 +24,9 @@ else
 
     # Install other system-level dependencies
     sudo apt-get install -y libgl1
+
+    # Install Python dependencies for Linux
+    pip install -r requirements-linux.txt
 fi
 
-echo "✅ System dependencies installed."
+echo "✅ System dependencies and Python packages installed."
