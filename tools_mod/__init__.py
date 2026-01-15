@@ -34,20 +34,9 @@ def execute_tool(name, args):
     if name in [t['name'] for t in database_tools()]:
         return execute_database_tool(name, args)
     if name in [t['name'] for t in learning_tools()]:
-        if name == "learn_repo":
-            return learn_repo_task()
-        elif name == "learn_directory":
-            return learn_directory_task(args['path'])
-        elif name == "learn_url":
-            return learn_url_task(args['url'])
+        return learn_repo_task(name, args)
     if name in [t['name'] for t in file_op_tools()]:
-        if name == "stat":
-            return stat_task(args['path'])
-        elif name == "chmod":
-            return chmod_task(args['path'], args['mode'])
-        elif name == "save_to_file":
-            return save_to_file(args['filename'], args['content'])
+        return execute_file_op_tool(name, args)
     if name in [t['name'] for t in display_tools()]:
-        if name == "display_image":
-            return display_image_task(args['path'])
+        return execute_display_tool(name, args)
     return f"Tool {name} not found."
