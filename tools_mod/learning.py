@@ -1,21 +1,26 @@
 import os
 import subprocess
 import fnmatch
-import google.genai as genai
 from google.genai import types as genai_types
-from utils.database import store_embedding
+from utils.database import store_embeddings
 import config
-from utils.learning import learn_directory, learn_url
+from utils.learning import learn_directory, learn_url, is_binary_file
+from utils.chunking import chunk_text
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def _get_ignored_patterns():
     """Helper to read patterns from .gitignore and config."""
     ignored = set(config.PROJECT_CONTEXT_IGNORE)
     try:
         # Find the repo root
-        repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).strip().decode('utf-8')
+        repo_root = (
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+            .strip()
+            .decode("utf-8")
+        )
         gitignore_path = os.path.join(repo_root, ".gitignore")
         with open(gitignore_path, "r") as f:
             for line in f:
@@ -27,6 +32,7 @@ def _get_ignored_patterns():
         pass  # No .gitignore or not a git repo, no problem
     return ignored
 
+
 def learn_repo_task():
     """
     Reads all files in the repository, respects .gitignore and PROJECT_CONTEXT_IGNORE,
@@ -36,7 +42,9 @@ def learn_repo_task():
 
     # Use git to list all files, which respects .gitignore
     try:
-        files = subprocess.check_output(["git", "ls-files"]).decode("utf-8").splitlines()
+        files = (
+            subprocess.check_output(["git", "ls-files"]).decode("utf-8").splitlines()
+        )
     except (subprocess.CalledProcessError, FileNotFoundError):
         # Fallback to os.walk if git is not available or not a git repo
         files = []
@@ -44,20 +52,39 @@ def learn_repo_task():
             for filename in filenames:
                 files.append(os.path.join(root, filename))
 
-    stored_count = 0
+    files_processed = 0
+    batch_texts = []
+    batch_metadatas = []
+    BATCH_SIZE = 100
+
     for filepath in files:
         # Extra check for patterns not in .gitignore
         if any(fnmatch.fnmatch(filepath, p) for p in ignored_patterns if p != ""):
+            continue
+
+        # Check binary
+        if is_binary_file(filepath):
             continue
 
         try:
             with open(filepath, "r", errors="ignore") as f:
                 content = f.read()
 
-            # We use the filepath as 'source' metadata
-            metadata = {"source": filepath}
-            store_embedding(content, metadata, collection_name="agent_learning")
-            stored_count += 1
+            chunks = chunk_text(content)
+            for i, chunk in enumerate(chunks):
+                batch_texts.append(chunk)
+                batch_metadatas.append({"source": filepath, "chunk_index": i})
+
+            files_processed += 1
+
+            # Flush batch
+            if len(batch_texts) >= BATCH_SIZE:
+                store_embeddings(
+                    batch_texts, batch_metadatas, collection_name="agent_learning"
+                )
+                batch_texts = []
+                batch_metadatas = []
+
         except FileNotFoundError:
             logger.error(f"File not found: {filepath}", exc_info=True)
         except PermissionError:
@@ -65,15 +92,26 @@ def learn_repo_task():
         except UnicodeDecodeError:
             logger.error(f"Unicode decode error for file: {filepath}", exc_info=True)
         except Exception as e:
-            logger.exception(f"An unexpected error occurred while processing {filepath}: {e}")
+            logger.exception(
+                f"An unexpected error occurred while processing {filepath}: {e}"
+            )
 
-    return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
+    # Flush remaining
+    if batch_texts:
+        store_embeddings(batch_texts, batch_metadatas, collection_name="agent_learning")
+
+    return (
+        f"Successfully processed {files_processed} files in the 'agent_learning' collection."
+    )
+
 
 def learn_directory_task(path):
     return learn_directory(path)
 
+
 def learn_url_task(url):
     return learn_url(url)
+
 
 def tool_definitions():
     return [
@@ -84,7 +122,7 @@ def tool_definitions():
                     description="Learn the entire repository by embedding its files.",
                     parameters=genai_types.Schema(
                         type=genai_types.Type.OBJECT,
-                        properties={}, # No parameters
+                        properties={},  # No parameters
                     ),
                 ),
                 genai_types.FunctionDeclaration(
@@ -92,7 +130,9 @@ def tool_definitions():
                     description="Learn a directory by embedding its files.",
                     parameters=genai_types.Schema(
                         type=genai_types.Type.OBJECT,
-                        properties={"path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        properties={
+                            "path": genai_types.Schema(type=genai_types.Type.STRING)
+                        },
                         required=["path"],
                     ),
                 ),
@@ -101,7 +141,9 @@ def tool_definitions():
                     description="Learn a URL by embedding its content.",
                     parameters=genai_types.Schema(
                         type=genai_types.Type.OBJECT,
-                        properties={"url": genai_types.Schema(type=genai_types.Type.STRING)},
+                        properties={
+                            "url": genai_types.Schema(type=genai_types.Type.STRING)
+                        },
                         required=["url"],
                     ),
                 ),

@@ -3,6 +3,7 @@ import difflib
 from utils.commands import run_command, user_confirm
 from utils.file_system import save_to_file
 from utils.display import display_image
+from utils.text_processing import extract_code_block
 from api import call_gemini_api
 import config
 
@@ -26,9 +27,7 @@ def handle_edit_file(model, filepath, prompt, save_as=None):
     ).text
 
     # Clean up the response from the model
-    if new_content.startswith("```") and new_content.endswith("```"):
-        lines = new_content.split("\n")
-        new_content = "\n".join(lines[1:-1])
+    new_content = extract_code_block(new_content)
 
     # Show a diff to the user
     diff = difflib.unified_diff(
