@@ -6,6 +6,7 @@ import fnmatch
 import re
 import google.genai as genai
 from utils.commands import run_command
+from google.genai import types as genai_types
 
 
 def lint_python_file_task(filepath, linter="flake8"):
@@ -128,7 +129,40 @@ def decompress_archive_task(archive_path, destination_path):
 
 
 def open_in_external_editor_task(filepath):
+    """Opens a file in an external editor, trying xdg-open first and falling back to termux-open."""
+    filepath = os.path.expanduser(filepath)
+    if shutil.which("xdg-open"):
+        try:
+            run_command(f"xdg-open {shlex.quote(filepath)}", shell=True)
+            return f"Opened {filepath} with xdg-open."
+        except Exception as e:
+            print(f"xdg-open failed: {e}")
+
+    if shutil.which("termux-open"):
+        try:
+            run_command(f"termux-open {shlex.quote(filepath)}", shell=True)
+            return f"Opened {filepath} with termux-open."
+        except Exception as e:
+            return f"Error with termux-open: {e}"
+
+    return "Error: Could not find a suitable command to open the file."
+
+def stat_task(path):
+    """Gets file or directory status."""
     try:
+        return run_command(f"stat {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
+    except Exception as e:
+        return f"Error: {e}"
+
+def chmod_task(path, mode):
+    """Changes file or directory permissions."""
+    try:
+        return run_command(["chmod", shlex.quote(mode), shlex.quote(os.path.expanduser(path))], check_output=True)
+    except Exception as e:
+        return f"Error: {e}"
+
+from google.genai import types as genai_types
+
         cmd = f"xdg-open {shlex.quote(os.path.expanduser(filepath))}"
         run_command(cmd, shell=True)
         return f"Opened {filepath} in external editor."
@@ -149,9 +183,16 @@ def chmod_task(path, mode):
     except Exception as e:
         return f"Error: {e}"
 
-from google.genai import types as genai_types
 
 def tool_definitions():
+    """
+    Declare and return GenAI tool metadata for the available filesystem and code utility tasks.
+    
+    The returned structure contains a single genai_types.Tool with FunctionDeclaration entries for each exposed task (linting, formatting, file operations, compression, search, and system status). Each declaration includes the function name, a short description, and a JSON schema describing its parameters and required fields.
+    
+    Returns:
+        tools (list[genai_types.Tool]): A list containing the tool descriptor that registers all available function declarations for use by the GenAI integration.
+    """
     return [
         genai_types.Tool(
             function_declarations=[
@@ -296,6 +337,34 @@ def tool_definitions():
                         required=["path", "mode"],
                     ),
                 ),
+                genai_types.FunctionDeclaration(
+                    name="save_to_file",
+                    description="Save content to a file.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "filename": genai_types.Schema(type=genai_types.Type.STRING),
+                            "content": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["filename", "content"],
+                    ),
+                ),
             ]
         )
     ]
+
+library = {
+    "lint_python_file": lint_python_file_task,
+    "format_code": format_code_task,
+    "apply_sed": apply_sed_task,
+    "create_directory": create_directory_task,
+    "list_directory_recursive": list_directory_recursive_task,
+    "copy_file": copy_file_task,
+    "move_file": move_file_task,
+    "find_files": find_files_task,
+    "compress_path": compress_path_task,
+    "decompress_archive": decompress_archive_task,
+    "open_in_external_editor": open_in_external_editor_task,
+    "stat": stat_task,
+    "chmod": chmod_task,
+}

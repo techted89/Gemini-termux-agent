@@ -40,7 +40,15 @@ def read_file_task(filepath):
 
 
 def install_packages(packages: list[str]):
-    """Installs a list of packages using apt-get after user confirmation."""
+    """
+    Install Debian/Ubuntu packages via `apt-get` after asking the user for confirmation.
+    
+    Parameters:
+        packages (list[str]): List of package names to install.
+    
+    Returns:
+        The command output string when installation is run, `"Denied."` if the user declines, or an error string if `packages` is not a list.
+    """
     if not isinstance(packages, list):
         return "Error: a list of package names is required."
 
@@ -52,67 +60,71 @@ def install_packages(packages: list[str]):
     return "Denied."
 
 
-tool_definitions = {
-    "install_packages": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="install_packages",
-                description="Install packages using apt-get",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "packages": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
+def tool_definitions():
+    """
+    Provide GenAI Tool declarations describing the module's callable utilities.
+    
+    Each returned Tool contains FunctionDeclaration entries for the available functions (install_packages, execute_shell_command, create_file, and read_file) including their parameter schemas.
+    
+    Returns:
+        list: A list of genai.types.Tool objects defining the module's tool functions for GenAI integration.
+    """
+    return [
+        genai.types.Tool(
+            function_declarations=[
+                genai.types.FunctionDeclaration(
+                    name="install_packages",
+                    description="Install packages using apt-get",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "packages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
                             }
-                        }
+                        },
+                        "required": ["packages"],
                     },
-                    "required": ["packages"],
-                },
-            )
-        ]
-    ),
-    "execute_shell_command": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="execute_shell_command",
-                description="Run shell cmd",
-                parameters={
-                    "type": "object",
-                    "properties": {"command": {"type": "string"}},
-                    "required": ["command"],
-                },
-            )
-        ]
-    ),
-    "create_file": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="create_file",
-                description="Create File",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "filepath": {"type": "string"},
-                        "content": {"type": "string"},
+                ),
+                genai.types.FunctionDeclaration(
+                    name="execute_shell_command",
+                    description="Run shell cmd",
+                    parameters={
+                        "type": "object",
+                        "properties": {"command": {"type": "string"}},
+                        "required": ["command"],
                     },
-                    "required": ["filepath"],
-                },
-            )
-        ]
-    ),
-    "read_file": genai.types.Tool(
-        function_declarations=[
-            genai.types.FunctionDeclaration(
-                name="read_file",
-                description="Read file",
-                parameters={
-                    "type": "object",
-                    "properties": {"filepath": {"type": "string"}},
-                    "required": ["filepath"],
-                },
-            )
-        ]
-    ),
+                ),
+                genai.types.FunctionDeclaration(
+                    name="create_file",
+                    description="Create File",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "filepath": {"type": "string"},
+                            "content": {"type": "string"},
+                        },
+                        "required": ["filepath"],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="read_file",
+                    description="Read file",
+                    parameters={
+                        "type": "object",
+                        "properties": {"filepath": {"type": "string"}},
+                        "required": ["filepath"],
+                    },
+                ),
+            ]
+        )
+    ]
+
+library = {
+    "execute_shell_command": execute_shell_command,
+    "create_file": create_file_task,
+    "read_file": read_file_task,
+    "install_packages": install_packages,
 }
