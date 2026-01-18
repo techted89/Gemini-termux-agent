@@ -56,7 +56,7 @@ db_client = get_db_client()
 
 def get_relevant_history(query, n_results=15):
     try:
-        collection = db_client.get_or_create_collection("agent_memory")
+        collection = get_collection("agent_memory")
         results = collection.query(query_texts=[query], n_results=n_results)
         return results["documents"][0] if results["documents"] else []
     except Exception:
@@ -65,7 +65,7 @@ def get_relevant_history(query, n_results=15):
 
 def get_relevant_context(query, n_results=5):
     try:
-        collection = db_client.get_or_create_collection("agent_memory")
+        collection = get_collection("agent_memory")
         results = collection.query(query_texts=[query], n_results=n_results)
         return "\n".join(results["documents"][0]) if results["documents"] else ""
     except Exception:
@@ -74,7 +74,7 @@ def get_relevant_context(query, n_results=5):
 
 def store_conversation_turn(user_query, assistant_response, user_id):
     try:
-        collection = db_client.get_or_create_collection("agent_memory")
+        collection = get_collection("agent_memory")
         doc_id = f"turn_{int(time.time())}"
         collection.add(
             documents=[f"User: {user_query}\nAssistant: {assistant_response}"],
@@ -87,7 +87,7 @@ def store_conversation_turn(user_query, assistant_response, user_id):
 
 def search_and_delete_history(query_text):
     try:
-        collection = db_client.get_or_create_collection("agent_memory")
+        collection = get_collection("agent_memory")
         results = collection.query(query_texts=[query_text], n_results=10)
         if results["ids"] and len(results["ids"][0]) > 0:
             collection.delete(ids=results["ids"][0])
@@ -99,7 +99,7 @@ def search_and_delete_history(query_text):
 
 def store_embedding(text, metadata, collection_name="agent_learning"):
     try:
-        collection = db_client.get_or_create_collection(collection_name)
+        collection = get_collection(collection_name)
         doc_id = hashlib.md5(text.encode()).hexdigest()
         collection.upsert(documents=[text], metadatas=[metadata], ids=[doc_id])
         return True
@@ -119,6 +119,9 @@ def store_embeddings(texts, metadatas, collection_name="agent_learning"):
 
 def query_embeddings(query_text, n_results=10, collection_name="agent_learning"):
     try:
+        collection = get_collection(collection_name)
+        return collection.query(query_texts=[query_text], n_results=n_results, include=["documents", "metadatas", "distances"])
+    except Exception: return None
         collection = db_client.get_or_create_collection(collection_name)
         return collection.query(
             query_texts=[query_text],
@@ -131,7 +134,7 @@ def query_embeddings(query_text, n_results=10, collection_name="agent_learning")
 
 def search_and_delete_knowledge(query_text, collection_name="agent_learning"):
     try:
-        collection = db_client.get_or_create_collection(collection_name)
+        collection = get_collection(collection_name)
         results = collection.query(query_texts=[query_text], n_results=10)
         if results["ids"] and len(results["ids"][0]) > 0:
             collection.delete(ids=results["ids"][0])
@@ -145,6 +148,8 @@ def update_embedding(
     doc_id, text=None, metadata=None, collection_name="agent_learning"
 ):
     try:
+        collection = get_collection(collection_name)
+        collection.update(ids=[doc_id], documents=[text] if text else None, metadatas=[metadata] if metadata else None)
         collection = db_client.get_or_create_collection(collection_name)
         collection.update(
             ids=[doc_id],
@@ -157,6 +162,8 @@ def update_embedding(
 
 
 def get_embedding(doc_id, collection_name="agent_learning"):
+    try: return get_collection(collection_name).get(ids=[doc_id])
+    except Exception: return None
     try:
         return db_client.get_collection(collection_name).get(ids=[doc_id])
     except Exception:
@@ -165,7 +172,7 @@ def get_embedding(doc_id, collection_name="agent_learning"):
 
 def get_available_metadata_sources(collection_name="agent_learning"):
     try:
-        collection = db_client.get_or_create_collection(collection_name)
+        collection = get_collection(collection_name)
         results = collection.get(include=["metadatas"])
         return (
             list(set(m.get("source") for m in results["metadatas"] if m.get("source")))
