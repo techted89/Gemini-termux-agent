@@ -57,7 +57,12 @@ def tool_definitions():
                     description="Runs tests, lints, and formats a Python file.",
                     parameters={
                         "type": "object",
-                        "properties": {"filepath": {"type": "string"}},
+                        "properties": {
+                            "filepath": {
+                                "type": "string",
+                                "description": "Path to the Python file to test, lint, and format"
+                            }
+                        },
                         "required": ["filepath"],
                     },
                 )

@@ -4,6 +4,7 @@ import shutil
 import shlex
 import fnmatch
 import re
+import subprocess
 import google.genai as genai
 from utils.commands import run_command
 from utils.file_system import save_to_file
@@ -131,21 +132,23 @@ def decompress_archive_task(archive_path, destination_path):
 def open_in_external_editor_task(filepath):
     """
     Opens a file in an external editor, trying xdg-open first then termux-open.
+    Uses subprocess list arguments to avoid shell injection.
     """
     try:
-        expanded_path = shlex.quote(os.path.expanduser(filepath))
+        expanded_path = os.path.expanduser(filepath)
 
         # Try xdg-open first
         try:
-             cmd = f"xdg-open {expanded_path}"
-             run_command(cmd, shell=True, check_output=True)
+             subprocess.run(["xdg-open", expanded_path], check=True, capture_output=True)
              return f"Opened {filepath} with xdg-open."
         except Exception as xdg_error:
              # Fallback to termux-open
              if shutil.which("termux-open"):
-                 cmd = f"termux-open {expanded_path}"
-                 run_command(cmd, shell=True, check_output=True)
-                 return f"Opened {filepath} with termux-open (xdg-open failed: {xdg_error})."
+                 try:
+                     subprocess.run(["termux-open", expanded_path], check=True, capture_output=True)
+                     return f"Opened {filepath} with termux-open (xdg-open failed: {xdg_error})."
+                 except Exception as termux_error:
+                     return f"Failed to open {filepath}. xdg-open failed: {xdg_error}. termux-open failed: {termux_error}."
              else:
                  return f"Failed to open {filepath}. xdg-open failed: {xdg_error}. termux-open not found."
 
@@ -179,7 +182,7 @@ def tool_definitions():
     return [
         genai_types.Tool(
             function_declarations=[
-                genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="lint_python_file",
                     description="Lint Python",
                     parameters=genai_types.Schema(

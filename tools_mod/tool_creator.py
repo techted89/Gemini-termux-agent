@@ -35,18 +35,19 @@ def register_tool_module_task(module_name):
         return "Error: Invalid module name."
 
     init_path = os.path.join("tools_mod", "__init__.py")
+    backup_path = init_path + ".bak"
 
     try:
         with open(init_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # 1. Add Import
-        # Find the line starting with "from . import"
-        # We assume there is one main import line.
-        # "from . import core, web, file_ops, ..."
+        # Create backup before modification
+        with open(backup_path, "w", encoding="utf-8") as f:
+            f.write(content)
 
-        # Check if already imported
-        if f", {module_name}" in content or f" {module_name}," in content or f"import {module_name}" in content:
+        # 1. Add Import
+        # Check if already imported (more precise check)
+        if re.search(rf'\bimport\s+.*\b{re.escape(module_name)}\b', content):
             return f"Module {module_name} seems to be already registered (import found)."
 
         import_pattern = r"(from \. import [^\n]+)"
@@ -59,12 +60,9 @@ def register_tool_module_task(module_name):
             return "Error: Could not find import line in __init__.py"
 
         # 2. Add to get_all_tool_definitions
-        # Look for "all_tools.extend(learning.tool_definitions())" or similar and append after it.
-        # We can append after the last all_tools.extend call.
-
-        # We'll use a specific anchor if possible, or just find the last occurrence.
-        # Let's verify the file content structure via read_file first? No, I assume standard structure.
-        # I'll look for "    return all_tools" and insert before it.
+        # We assume the user wants to add it to the list.
+        # This part relies on string matching which is brittle but necessary here.
+        # We append "all_tools.extend(module_name.tool_definitions())"
 
         def_pattern = r"(    return all_tools)"
         def_insert = f"    all_tools.extend({module_name}.tool_definitions())\n"
@@ -73,16 +71,23 @@ def register_tool_module_task(module_name):
             content = re.sub(def_pattern, f"{def_insert}\\1", content)
 
         # 3. Add to execute_tool
-        # Look for the last "if hasattr(..., 'library')..." block and append after it.
-        # Or just find "# 2. Legacy" and insert before it.
+        # With the new dynamic loop in __init__.py, we just need to add the module to the list!
+        # The list is: modern_modules = [core, web, file_ops, git, nlp, debug_test, tool_creator, knowledge]
 
-        exec_pattern = r"(    # 2. Legacy / Special Cases)"
-        exec_insert = f"""    if hasattr({module_name}, 'library') and name in {module_name}.library:
-        return {module_name}.library[name](**args)
-
-"""
-        if exec_insert.strip() not in content:
-             content = re.sub(exec_pattern, f"{exec_insert}\\1", content)
+        # We look for that list definition.
+        list_pattern = r"(modern_modules = \[[^\]]+)(\])"
+        # We need to handle multi-line lists.
+        match_list = re.search(list_pattern, content, re.DOTALL)
+        if match_list:
+            current_list = match_list.group(1)
+            # Add comma if needed
+            new_list_content = f"{current_list}, {module_name}"
+            content = content.replace(current_list, new_list_content)
+        else:
+            # Fallback: Maybe the list structure changed?
+            # We can't safely modify execute_tool if we can't find the list.
+            # But wait, if __init__.py logic is just "iterate over this list", updating the list is enough.
+            pass
 
         with open(init_path, "w", encoding="utf-8") as f:
             f.write(content)

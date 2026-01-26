@@ -6,6 +6,9 @@ import chromadb
 from chromadb.config import Settings
 import config
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     import pysqlite3
@@ -24,7 +27,7 @@ def _get_validated_db_path():
 def _init_db_client():
     """Initializes the ChromaDB client with logging."""
     path = _get_validated_db_path()
-    print(f"Initializing ChromaDB PersistentClient at: {path}")
+    logger.info(f"Initializing ChromaDB PersistentClient at: {path}")
     return chromadb.PersistentClient(path=path)
 
 db_client = _init_db_client()
