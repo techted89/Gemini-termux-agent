@@ -4,6 +4,7 @@ import shutil
 import shlex
 import fnmatch
 import re
+import subprocess
 import google.genai as genai
 from utils.commands import run_command
 from utils.file_system import save_to_file
@@ -149,8 +150,8 @@ def open_in_external_editor_task(filepath):
                  cmd = f"termux-open {expanded_path}"
                  run_command(cmd, shell=True, check_output=True)
                  return f"Opened {filepath} with termux-open (xdg-open failed: {xdg_error})."
-             except Exception:
-                 return f"Failed to open {filepath}. xdg-open failed: {xdg_error}. termux-open not found."
+             except Exception as e:
+                 return f"Failed to open {filepath}. xdg-open failed: {xdg_error}. termux-open failed: {e}"
 
     except Exception as e:
         return f"Error opening file: {e}"
@@ -200,7 +201,7 @@ def tool_definitions():
                         required=["filepath"],
                     ),
                 ),
-                genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="apply_sed",
                     description="Apply Sed",
                     parameters=genai_types.Schema(
@@ -212,7 +213,7 @@ def tool_definitions():
                         required=["filepath", "sed_expression"],
                     ),
                 ),
-                genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="create_directory",
                     description="Create Dir",
                     parameters=genai_types.Schema(

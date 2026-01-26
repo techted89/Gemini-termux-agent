@@ -1,11 +1,12 @@
 import google.genai as genai
 import shutil
-import re
+import fnmatch
 from utils.commands import run_command
 
 def list_installed_packages_task(pattern=None):
     """
     Lists installed packages using dpkg (on Linux/Termux).
+    Supports glob patterns using fnmatch (e.g., 'python*').
     """
     try:
         cmd = "dpkg -l"
@@ -22,7 +23,7 @@ def list_installed_packages_task(pattern=None):
                 if len(parts) >= 2:
                     pkg_name = parts[1]
                     if pattern:
-                        if re.search(pattern, pkg_name):
+                        if fnmatch.fnmatch(pkg_name, pattern):
                             packages.append(line)
                     else:
                         packages.append(line)
@@ -38,7 +39,8 @@ def check_tool_installed_task(tool_name):
     """
     Checks if a CLI tool is installed using the shell.
     """
-    if not re.match(r"^[a-zA-Z0-9_-]+$", tool_name):
+    # Simple alphanumeric check for tool name safety
+    if not tool_name.replace("-", "").replace("_", "").isalnum():
         return "Invalid tool name."
 
     try:
@@ -59,11 +61,11 @@ def tool_definitions():
             function_declarations=[
                 genai.types.FunctionDeclaration(
                     name="list_installed_packages",
-                    description="Lists installed system packages (optionally matching a pattern).",
+                    description="Lists installed system packages (optionally matching a glob pattern).",
                     parameters={
                         "type": "object",
                         "properties": {
-                            "pattern": {"type": "string", "description": "Regex pattern to filter package names"}
+                            "pattern": {"type": "string", "description": "Glob pattern to filter package names (e.g., 'python*')"}
                         },
                         "required": [],
                     },

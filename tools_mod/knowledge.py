@@ -32,8 +32,11 @@ def search_knowledge_task(query):
         output.append(f"Source: {meta.get('source', 'Unknown')}\nContent: {doc[:200]}...")
     return "\n---\n".join(output)
 
-def clear_knowledge_task():
-    """Clears all knowledge (Dangerous)."""
+def clear_knowledge_task(confirm=False):
+    """Clears all knowledge (Dangerous). Requires explicit confirmation."""
+    if not confirm:
+        return "Operation cancelled. You must explicitly set 'confirm' to True to clear the knowledge base."
+
     delete_embeddings("agent_learning")
     return "Knowledge base cleared."
 
@@ -67,7 +70,16 @@ def tool_definitions():
                 genai.types.FunctionDeclaration(
                     name="clear_knowledge",
                     description="Clears the entire knowledge base.",
-                    parameters={"type": "object", "properties": {}},
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "confirm": {
+                                "type": "boolean",
+                                "description": "Must be set to True to execute this destructive action."
+                            }
+                        },
+                        "required": ["confirm"],
+                    },
                 ),
             ]
         )

@@ -1,15 +1,14 @@
 import os
 import re
 import google.genai as genai
+import ast
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_new_tool_task(module_name, code_content):
     """
     Creates a new Python module in tools_mod/ with the provided content.
-    The content should follow the standard pattern:
-    - Imports
-    - Tool functions
-    - tool_definitions() returning List[genai.types.Tool]
-    - library dict mapping names to functions
     """
     if not re.match(r"^[a-zA-Z0-9_]+$", module_name):
         return "Error: Invalid module name. Use alphanumeric characters and underscores only."
@@ -26,10 +25,50 @@ def create_new_tool_task(module_name, code_content):
     except Exception as e:
         return f"Error creating tool module: {e}"
 
+class ToolDefinitionVisitor(ast.NodeVisitor):
+    def __init__(self, module_name):
+        self.module_name = module_name
+        self.found = False
+        self.modified = False
+
+    def visit_FunctionDef(self, node):
+        if node.name == "get_all_tool_definitions":
+            # Search for "return all_tools"
+            for i, stmt in enumerate(node.body):
+                if isinstance(stmt, ast.Return):
+                    # Check if it returns "all_tools"
+                    if isinstance(stmt.value, ast.Name) and stmt.value.id == "all_tools":
+                        # Found it! Insert before this statement.
+                        # all_tools.extend(module_name.tool_definitions())
+                        new_call = ast.Expr(
+                            value=ast.Call(
+                                func=ast.Attribute(
+                                    value=ast.Name(id="all_tools", ctx=ast.Load()),
+                                    attr="extend",
+                                    ctx=ast.Load()
+                                ),
+                                args=[
+                                    ast.Call(
+                                        func=ast.Attribute(
+                                            value=ast.Name(id=self.module_name, ctx=ast.Load()),
+                                            attr="tool_definitions",
+                                            ctx=ast.Load()
+                                        ),
+                                        args=[],
+                                        keywords=[]
+                                    )
+                                ],
+                                keywords=[]
+                            )
+                        )
+                        node.body.insert(i, new_call)
+                        self.modified = True
+                        break
+        self.generic_visit(node)
+
 def register_tool_module_task(module_name):
     """
-    Registers a new tool module in tools_mod/__init__.py so it can be used.
-    It adds the import, extends tool_definitions, and adds the library lookup.
+    Registers a new tool module in tools_mod/__init__.py using AST for robust insertion.
     """
     if not re.match(r"^[a-zA-Z0-9_]+$", module_name):
         return "Error: Invalid module name."
@@ -41,56 +80,77 @@ def register_tool_module_task(module_name):
         with open(init_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Create backup before modification
+        # Create backup
         with open(backup_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-        # 1. Add Import
-        # Check if already imported (more precise check)
-        if re.search(rf'\bimport\s+.*\b{re.escape(module_name)}\b', content):
-            return f"Module {module_name} seems to be already registered (import found)."
+        # 1. Add Import (Regex is usually fine for top-level imports, but AST is safer?
+        # Mixing AST unparse with regex is tricky. AST unparse rewrites the whole file.
+        # So we should do import via AST too if we use AST unparse.)
 
-        import_pattern = r"(from \. import [^\n]+)"
-        match = re.search(import_pattern, content)
-        if match:
-            current_imports = match.group(1)
-            new_imports = f"{current_imports}, {module_name}"
-            content = content.replace(current_imports, new_imports)
-        else:
-            return "Error: Could not find import line in __init__.py"
+        # Let's parse the whole file
+        tree = ast.parse(content)
 
-        # 2. Add to get_all_tool_definitions
-        # We assume the user wants to add it to the list.
-        # This part relies on string matching which is brittle but necessary here.
-        # We append "all_tools.extend(module_name.tool_definitions())"
+        # Check if already imported
+        already_imported = False
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom) and node.module == ".":
+                for alias in node.names:
+                    if alias.name == module_name:
+                        already_imported = True
+                        break
 
-        def_pattern = r"(    return all_tools)"
-        def_insert = f"    all_tools.extend({module_name}.tool_definitions())\n"
+        if already_imported:
+             return f"Module {module_name} seems to be already registered."
 
-        if def_insert not in content:
-            content = re.sub(def_pattern, f"{def_insert}\\1", content)
+        # Add import to the first "from . import ..." block found
+        import_added = False
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom) and node.module == ".":
+                node.names.append(ast.alias(name=module_name, asname=None))
+                import_added = True
+                break
 
-        # 3. Add to execute_tool
-        # With the new dynamic loop in __init__.py, we just need to add the module to the list!
-        # The list is: modern_modules = [core, web, file_ops, git, nlp, debug_test, tool_creator, knowledge]
+        if not import_added:
+            # Create a new import node at the top?
+            # Or assume standard structure existed. If not found, append to top.
+            # But let's fail if structure is totally weird to be safe.
+            # Or just prepend.
+            new_import = ast.ImportFrom(module=".", names=[ast.alias(name=module_name, asname=None)], level=1)
+            tree.body.insert(0, new_import)
 
-        # We look for that list definition.
-        list_pattern = r"(modern_modules = \[[^\]]+)(\])"
-        # We need to handle multi-line lists.
-        match_list = re.search(list_pattern, content, re.DOTALL)
-        if match_list:
-            current_list = match_list.group(1)
-            # Add comma if needed
-            new_list_content = f"{current_list}, {module_name}"
-            content = content.replace(current_list, new_list_content)
-        else:
-            # Warn about partial registration
-            print(f"Warning: Could not add {module_name} to modern_modules list. Tool definitions registered but execution may fail.")
+        # 2. Modify get_all_tool_definitions using Visitor/Modifier logic
+        visitor = ToolDefinitionVisitor(module_name)
+        visitor.visit(tree)
 
+        if not visitor.modified:
+            return "Error: Could not find 'get_all_tool_definitions' or 'return all_tools' to patch."
+
+        # 3. Modify execute_tool (Regex/String replacement for the list)
+        # AST unparse will produce clean code. We can modify the list node if we find it.
+        # modern_modules = [...]
+
+        list_modified = False
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                # Check targets
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "modern_modules":
+                        if isinstance(node.value, ast.List):
+                            # Add module_name to list
+                            node.value.elts.append(ast.Name(id=module_name, ctx=ast.Load()))
+                            list_modified = True
+                            break
+
+        if not list_modified:
+            logger.warning(f"Could not find 'modern_modules' list in {init_path}. 'execute_tool' registration might be incomplete.")
+
+        # Write back
+        new_content = ast.unparse(tree)
         with open(init_path, "w", encoding="utf-8") as f:
-            f.write(content)
+            f.write(new_content)
 
-        return f"Successfully registered {module_name}. The new tools should be available."
+        return f"Successfully registered {module_name}."
 
     except Exception as e:
         return f"Error registering module: {e}"

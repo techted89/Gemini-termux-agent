@@ -114,9 +114,14 @@ def get_all_collections():
     except Exception: return []
 
 def get_collection_count(collection_name="agent_memory"):
-    try: return db_client.get_collection(collection_name).count()
-    except: return 0
+    try:
+        return db_client.get_collection(collection_name).count()
+    except Exception as e:
+        logger.error(f"Error getting collection count for {collection_name}: {e}")
+        return 0
 
 def delete_embeddings(collection_name="agent_learning"):
-    try: db_client.delete_collection(collection_name)
-    except Exception: pass
+    try:
+        db_client.delete_collection(collection_name)
+    except Exception as e:
+        logger.error(f"Error deleting collection {collection_name}: {e}")

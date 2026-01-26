@@ -3,7 +3,7 @@
 if [ -d "/data/data/com.termux/files/home" ]; then
     # Termux Environment
     pkg update
-    pkg install -y python clang cmake ninja pkg-config libopenblas
+    pkg install -y python
 
     # Use standard requirements for Termux
     if [ -f "requirements.txt" ]; then
