@@ -3,7 +3,7 @@ import subprocess
 import fnmatch
 import google.genai as genai
 from google.genai import types as genai_types
-from utils.database import store_embedding
+from utils.database import store_embedding, store_embeddings
 import config
 from utils.learning import learn_directory, learn_url
 import logging
@@ -44,7 +44,8 @@ def learn_repo_task():
             for filename in filenames:
                 files.append(os.path.join(root, filename))
 
-    stored_count = 0
+    texts = []
+    metadatas = []
     for filepath in files:
         # Extra check for patterns not in .gitignore
         if any(fnmatch.fnmatch(filepath, p) for p in ignored_patterns if p != ""):
@@ -55,9 +56,8 @@ def learn_repo_task():
                 content = f.read()
 
             # We use the filepath as 'source' metadata
-            metadata = {"source": filepath}
-            store_embedding(content, metadata, collection_name="agent_learning")
-            stored_count += 1
+            metadatas.append({"source": filepath})
+            texts.append(content)
         except FileNotFoundError:
             logger.error(f"File not found: {filepath}", exc_info=True)
         except PermissionError:
@@ -67,7 +67,10 @@ def learn_repo_task():
         except Exception as e:
             logger.exception(f"An unexpected error occurred while processing {filepath}: {e}")
 
-    return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
+    if texts:
+        store_embeddings(texts, metadatas, collection_name="agent_learning")
+
+    return f"Successfully stored content from {len(texts)} files in the 'agent_learning' collection."
 
 def learn_directory_task(path):
     return learn_directory(path)
