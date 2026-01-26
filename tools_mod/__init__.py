@@ -3,6 +3,7 @@ from .memory import execute_memory_tool
 from .database import execute_database_tool
 from .display import display_image_task
 from .learning import learn_repo_task, learn_directory_task, learn_url_task
+from utils.file_system import save_to_file
 
 def get_all_tool_definitions():
     """
@@ -78,5 +79,9 @@ def execute_tool(name, args):
         if not path:
             return "Error: 'path' parameter is required for display_image."
         return display_image_task(path)
+
+    # Backward Compatibility
+    if name == "save_to_file":
+        return save_to_file(args.get('filename'), args.get('content'))
 
     return f"Tool {name} not found."
