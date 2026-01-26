@@ -1,8 +1,7 @@
 import os
-from utils.database import store_embedding, store_embeddings
+from utils.database import store_embedding
 from urllib.parse import urlparse
 import config
-
 
 def learn_file_content(file_path, content):
     """
@@ -10,7 +9,6 @@ def learn_file_content(file_path, content):
     """
     store_embedding(content, {"source": file_path}, collection_name="agent_learning")
     print(f"  - Learned {file_path}")
-
 
 def is_valid_url(url):
     """
@@ -21,7 +19,6 @@ def is_valid_url(url):
         return all([result.scheme, result.netloc])
     except ValueError:
         return False
-
 
 def learn_url(url):
     """
@@ -53,16 +50,9 @@ def learn_directory(path):
     if not os.path.isdir(path):
         return f"Path is not a valid directory: {path}"
 
-    batch_contents = []
-    batch_metadatas = []
-    batch_paths = []
-
     for root, _, files in os.walk(path):
         # Skip ignored directories
-        if any(
-            f"/{ignored}/" in root.replace(path, "")
-            for ignored in config.PROJECT_CONTEXT_IGNORE
-        ) or any(root.endswith(ignored) for ignored in config.PROJECT_CONTEXT_IGNORE):
+        if any(f"/{ignored}/" in root.replace(path, "") for ignored in config.PROJECT_CONTEXT_IGNORE) or any(root.endswith(ignored) for ignored in config.PROJECT_CONTEXT_IGNORE):
             continue
 
         for file in files:
@@ -74,22 +64,8 @@ def learn_directory(path):
             try:
                 with open(file_path, "r", errors="ignore") as f:
                     content = f.read()
-
-                batch_contents.append(content)
-                batch_metadatas.append({"source": file_path})
-                batch_paths.append(file_path)
-
+                learn_file_content(file_path, content)
             except Exception as e:
                 print(f"  - Error reading {file_path}: {e}")
-
-    if batch_contents:
-        success = store_embeddings(
-            batch_contents, batch_metadatas, collection_name="agent_learning"
-        )
-        if success:
-            for p in batch_paths:
-                print(f"  - Learned {p}")
-        else:
-            print(f"  - Failed to learn batch of {len(batch_contents)} files.")
 
     return f"Finished learning directory: {path}"

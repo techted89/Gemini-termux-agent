@@ -1,5 +1,6 @@
 import google.genai as genai
 import os
+import re
 from utils.commands import run_command, user_confirm
 
 # --- Core Tools ---
@@ -32,7 +33,7 @@ def read_file_task(filepath):
     print(f'Tool: Running read_file_task(filepath="{filepath}")')
     try:
         filepath = os.path.expanduser(filepath)
-        with open(filepath, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
         return f"CONTEXT FILE ({filepath}):\n---\n{content}\n---"
     except Exception as e:
@@ -40,17 +41,14 @@ def read_file_task(filepath):
 
 
 def install_packages(packages: list[str]):
-    """
-    Install Debian/Ubuntu packages via `apt-get` after asking the user for confirmation.
-    
-    Parameters:
-        packages (list[str]): List of package names to install.
-    
-    Returns:
-        The command output string when installation is run, `"Denied."` if the user declines, or an error string if `packages` is not a list.
-    """
+    """Installs a list of packages using apt-get after user confirmation."""
     if not isinstance(packages, list):
         return "Error: a list of package names is required."
+
+    # Validate package names (alphanumeric, hyphens, dots, plus signs)
+    for pkg in packages:
+        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9.+-]*$', pkg):
+            return f"Error: invalid package name '{pkg}'"
 
     package_str = " ".join(packages)
     cmd = f"sudo apt-get install -y {package_str}"
@@ -61,14 +59,6 @@ def install_packages(packages: list[str]):
 
 
 def tool_definitions():
-    """
-    Provide GenAI Tool declarations describing the module's callable utilities.
-    
-    Each returned Tool contains FunctionDeclaration entries for the available functions (install_packages, execute_shell_command, create_file, and read_file) including their parameter schemas.
-    
-    Returns:
-        list: A list of genai.types.Tool objects defining the module's tool functions for GenAI integration.
-    """
     return [
         genai.types.Tool(
             function_declarations=[
