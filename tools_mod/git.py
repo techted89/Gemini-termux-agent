@@ -1,4 +1,5 @@
 import google.genai as genai
+import shlex
 from utils.commands import run_command
 
 
@@ -10,17 +11,20 @@ def git_status_task():
 
 
 def git_pull_task(branch="main"):
-    return run_command(f"git pull origin {branch}", shell=True, check_output=True)
+    sanitized_branch = shlex.quote(branch)
+    return run_command(f"git pull origin {sanitized_branch}", shell=True, check_output=True)
 
 
 def git_push_task(branch="main"):
-    return run_command(f"git push origin {branch}", shell=True, check_output=True)
+    sanitized_branch = shlex.quote(branch)
+    return run_command(f"git push origin {sanitized_branch}", shell=True, check_output=True)
 
 
 def git_branch_task(new_branch_name=None):
     if new_branch_name:
+        sanitized_name = shlex.quote(new_branch_name)
         return run_command(
-            f"git checkout -b {new_branch_name}", shell=True, check_output=True
+            f"git checkout -b {sanitized_name}", shell=True, check_output=True
         )
     return run_command("git branch", shell=True, check_output=True)
 

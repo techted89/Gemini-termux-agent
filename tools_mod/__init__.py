@@ -1,5 +1,4 @@
 from . import core, web, file_ops, memory, database, learning, display, git, nlp, debug_test, tool_creator
-from . import core, web, file_ops, memory, database, learning, display
 from .memory import execute_memory_tool
 from .database import execute_database_tool
 from .display import display_image_task
@@ -8,14 +7,6 @@ from .learning import learn_repo_task, learn_directory_task, learn_url_task
 def get_all_tool_definitions():
     """
     Returns a flat list of all tool definitions (Tools or Dicts).
-from utils.file_system import save_to_file
-
-def get_all_tool_definitions():
-    """
-    Aggregate and return a flat list of tool definitions from both modern and legacy modules.
-    
-    Returns:
-        list: Tool definitions collected from core, web, file_ops, learning, memory, database, and display. Each item may be a Tool object or a dict.
     """
     all_tools = []
 
@@ -36,51 +27,28 @@ def get_all_tool_definitions():
 
     return all_tools
 
-# Export as variable and function
-tool_definitions_list = get_all_tool_definitions()
-
 def tool_definitions():
-    """
-    Provide a cached list of all tool definitions available in the module.
-    
-    Returns:
-        list: The precomputed list of tool definition dictionaries aggregated from modern and legacy modules.
-    """
-    return tool_definitions_list
+    # Dynamically call get_all_tool_definitions each time
+    # to support runtime updates (e.g., via tool_creator)
+    return get_all_tool_definitions()
 
 def execute_tool(name, args):
     """
     Executes a tool by name with the given arguments.
     """
     # 1. Modern Library Lookup
-    modern_modules = [core, web, file_ops, git, nlp, debug_test, tool_creator]
+    # Consolidated loop for cleaner extension
+    modern_modules = [
+        core, web, file_ops, git, nlp, debug_test, tool_creator
+    ]
+
     for module in modern_modules:
         if hasattr(module, 'library') and name in module.library:
             return module.library[name](**args)
 
-    Dispatches and runs a registered tool identified by name using the provided arguments.
-    
-    Parameters:
-        name (str): Name of the tool to execute.
-        args (dict): Mapping of keyword arguments to pass to the tool.
-    
-    Returns:
-        The result returned by the invoked tool, or the string "Tool {name} not found." when no matching tool exists.
-    """
-    # 1. Modern Library Lookup
-    if hasattr(core, 'library') and name in core.library:
-        return core.library[name](**args)
-
-    if hasattr(web, 'library') and name in web.library:
-        return web.library[name](**args)
-
-    if hasattr(file_ops, 'library') and name in file_ops.library:
-        return file_ops.library[name](**args)
-
     # 2. Legacy / Special Cases
 
     # Memory Tools
-    # Dynamic check against definitions
     memory_tools = [t['name'] for t in memory.tool_definitions() if isinstance(t, dict) and 'name' in t]
     if name in memory_tools:
         return execute_memory_tool(name, args)
@@ -103,17 +71,12 @@ def execute_tool(name, args):
         if not url:
             return "Error: 'url' parameter is required for learn_url."
         return learn_url_task(url)
-        return learn_directory_task(args.get('path'))
-    elif name == "learn_url":
-        return learn_url_task(args.get('url'))
 
     # Display Tools
     if name == "display_image":
-        return display_image_task(args.get('path'))
-
-    return f"Tool {name} not found."
-    # Backward Compatibility
-    if name == "save_to_file":
-        return save_to_file(args.get('filename'), args.get('content'))
+        path = args.get('path')
+        if not path:
+            return "Error: 'path' parameter is required for display_image."
+        return display_image_task(path)
 
     return f"Tool {name} not found."

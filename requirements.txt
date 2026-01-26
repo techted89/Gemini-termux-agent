@@ -8,6 +8,7 @@ Pillow
 prompt_toolkit
 requests
 textual
+scikit-learn
 google-api-python-client
 google-auth-httplib2
 google-auth
@@ -15,4 +16,5 @@ langchain
 langchain-community
 langchain-core
 langchain-google-genai
+sentence-transformers
 ipython
