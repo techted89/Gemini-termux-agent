@@ -36,15 +36,21 @@ def list_installed_packages_task(pattern=None):
 
 def check_tool_installed_task(tool_name):
     """
-    Checks if a CLI tool is installed.
+    Checks if a CLI tool is installed using the shell.
     """
     if not re.match(r"^[a-zA-Z0-9_-]+$", tool_name):
         return "Invalid tool name."
 
-    path = shutil.which(tool_name)
-    if path:
-        return f"Tool '{tool_name}' is installed at {path}"
-    else:
+    try:
+        # Use shell execution to check for tool presence
+        cmd = f"command -v {tool_name}"
+        path = run_command(cmd, shell=True, check_output=True)
+        if path:
+            return f"Tool '{tool_name}' is installed at {path}"
+        else:
+            return f"Tool '{tool_name}' is NOT installed."
+    except Exception:
+        # If command fails (exit code != 0), it's not found
         return f"Tool '{tool_name}' is NOT installed."
 
 def tool_definitions():
