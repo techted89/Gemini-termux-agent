@@ -8,16 +8,15 @@ import config
 from pathlib import Path
 import logging
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Handle sqlite3 requirement for ChromaDB
 try:
     import pysqlite3
-
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 except ImportError:
     pass
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 def get_db_client():
     """Initializes and returns the ChromaDB client based on config."""
@@ -34,6 +33,14 @@ def get_db_client():
         return chromadb.PersistentClient(path=db_path)
 
 db_client = get_db_client()
+_collections_cache = {}
+
+def get_collection(name):
+    """Retrieves a collection, using a cache to avoid repeated API calls."""
+    if name not in _collections_cache:
+        _collections_cache[name] = db_client.get_or_create_collection(name)
+    return _collections_cache[name]
+
 def _get_validated_db_path():
     """Validates and returns the ChromaDB path."""
     # Default to a relative path for portability
@@ -41,18 +48,6 @@ def _get_validated_db_path():
     if not os.path.exists(db_path):
         os.makedirs(db_path)
     return db_path
-
-    if provider == "http":
-        logger.info(f"Initializing ChromaDB HttpClient with host={config.CHROMA_HOST}, port={config.CHROMA_PORT}")
-        return chromadb.HttpClient(host=config.CHROMA_HOST, port=config.CHROMA_PORT)
-    else:
-        # Default to local, persistent client
-        db_path = getattr(config, "CHROMA_DB_PATH", "chroma_db")
-        os.makedirs(db_path, exist_ok=True)
-        logger.info(f"Initializing ChromaDB PersistentClient with path={db_path}")
-        return chromadb.PersistentClient(path=db_path)
-
-db_client = get_db_client()
 
 def get_relevant_history(query, n_results=15):
     try:
@@ -109,7 +104,7 @@ def store_embedding(text, metadata, collection_name="agent_learning"):
 
 def store_embeddings(texts, metadatas, collection_name="agent_learning"):
     try:
-        collection = db_client.get_or_create_collection(collection_name)
+        collection = get_collection(collection_name)
         ids = [hashlib.md5(text.encode()).hexdigest() for text in texts]
         collection.upsert(documents=texts, metadatas=metadatas, ids=ids)
         return True
@@ -121,13 +116,6 @@ def query_embeddings(query_text, n_results=10, collection_name="agent_learning")
     try:
         collection = get_collection(collection_name)
         return collection.query(query_texts=[query_text], n_results=n_results, include=["documents", "metadatas", "distances"])
-    except Exception: return None
-        collection = db_client.get_or_create_collection(collection_name)
-        return collection.query(
-            query_texts=[query_text],
-            n_results=n_results,
-            include=["documents", "metadatas", "distances"],
-        )
     except Exception:
         return None
 
@@ -150,22 +138,14 @@ def update_embedding(
     try:
         collection = get_collection(collection_name)
         collection.update(ids=[doc_id], documents=[text] if text else None, metadatas=[metadata] if metadata else None)
-        collection = db_client.get_or_create_collection(collection_name)
-        collection.update(
-            ids=[doc_id],
-            documents=[text] if text else None,
-            metadatas=[metadata] if metadata else None,
-        )
         return True
     except Exception:
         return False
 
 
 def get_embedding(doc_id, collection_name="agent_learning"):
-    try: return get_collection(collection_name).get(ids=[doc_id])
-    except Exception: return None
     try:
-        return db_client.get_collection(collection_name).get(ids=[doc_id])
+        return get_collection(collection_name).get(ids=[doc_id])
     except Exception:
         return None
 
@@ -192,7 +172,7 @@ def get_all_collections():
 
 def get_collection_count(collection_name="agent_memory"):
     try:
-        return db_client.get_collection(collection_name).count()
+        return get_collection(collection_name).count()
     except:
         return 0
 
@@ -200,5 +180,7 @@ def get_collection_count(collection_name="agent_memory"):
 def delete_embeddings(collection_name="agent_learning"):
     try:
         db_client.delete_collection(collection_name)
+        if collection_name in _collections_cache:
+            del _collections_cache[collection_name]
     except Exception:
         pass

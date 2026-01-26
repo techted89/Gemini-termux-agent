@@ -33,7 +33,10 @@ class GenerativeModelWrapper:
 
         decls = []
         for t in raw_list:
-            if isinstance(t, dict):
+            if isinstance(t, types.Tool):
+                if t.function_declarations:
+                    decls.extend(t.function_declarations)
+            elif isinstance(t, dict):
                 # Ensure parameters is a dict to satisfy SDK mapping expectations
                 params = t.get("parameters")
                 if not isinstance(params, dict):

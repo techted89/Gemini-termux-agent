@@ -157,28 +157,6 @@ def stat_task(path):
 def chmod_task(path, mode):
     """Changes file or directory permissions."""
     try:
-        return run_command(["chmod", shlex.quote(mode), shlex.quote(os.path.expanduser(path))], check_output=True)
-    except Exception as e:
-        return f"Error: {e}"
-
-from google.genai import types as genai_types
-
-        cmd = f"xdg-open {shlex.quote(os.path.expanduser(filepath))}"
-        run_command(cmd, shell=True)
-        return f"Opened {filepath} in external editor."
-    except Exception as e:
-        return f"Error: {e}"
-
-def stat_task(path):
-    """Gets file or directory status."""
-    try:
-        return run_command(f"stat {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
-    except Exception as e:
-        return f"Error: {e}"
-
-def chmod_task(path, mode):
-    """Changes file or directory permissions."""
-    try:
         return run_command(f"chmod {mode} {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
     except Exception as e:
         return f"Error: {e}"
