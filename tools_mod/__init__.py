@@ -1,16 +1,14 @@
-from . import core, web, file_ops, memory, database, learning, display
+from . import core, web, file_ops, memory, database, learning, display, git, nlp, debug_test, tool_creator, knowledge, system
 from .memory import execute_memory_tool
 from .database import execute_database_tool
 from .display import display_image_task
 from .learning import learn_repo_task, learn_directory_task, learn_url_task
 from utils.file_system import save_to_file
+import traceback
 
 def get_all_tool_definitions():
     """
-    Aggregate and return a flat list of tool definitions from both modern and legacy modules.
-    
-    Returns:
-        list: Tool definitions collected from core, web, file_ops, learning, memory, database, and display. Each item may be a Tool object or a dict.
+    Returns a flat list of all tool definitions (Tools or Dicts).
     """
     all_tools = []
 
@@ -19,6 +17,12 @@ def get_all_tool_definitions():
     all_tools.extend(web.tool_definitions())
     all_tools.extend(file_ops.tool_definitions())
     all_tools.extend(learning.tool_definitions())
+    all_tools.extend(git.tool_definitions())
+    all_tools.extend(nlp.tool_definitions())
+    all_tools.extend(debug_test.tool_definitions())
+    all_tools.extend(tool_creator.tool_definitions())
+    all_tools.extend(knowledge.tool_definitions())
+    all_tools.extend(system.tool_definitions())
 
     # Legacy Modules (Return List[Dict] or List[Tool])
     all_tools.extend(memory.tool_definitions())
@@ -27,66 +31,65 @@ def get_all_tool_definitions():
 
     return all_tools
 
-# Export as variable and function
-tool_definitions_list = get_all_tool_definitions()
-
 def tool_definitions():
-    """
-    Provide a cached list of all tool definitions available in the module.
-    
-    Returns:
-        list: The precomputed list of tool definition dictionaries aggregated from modern and legacy modules.
-    """
-    return tool_definitions_list
+    # Dynamically call get_all_tool_definitions each time
+    # to support runtime updates (e.g., via tool_creator)
+    return get_all_tool_definitions()
 
 def execute_tool(name, args):
     """
-    Dispatches and runs a registered tool identified by name using the provided arguments.
-    
-    Parameters:
-        name (str): Name of the tool to execute.
-        args (dict): Mapping of keyword arguments to pass to the tool.
-    
-    Returns:
-        The result returned by the invoked tool, or the string "Tool {name} not found." when no matching tool exists.
+    Executes a tool by name with the given arguments.
+    Catches exceptions and returns detailed tracebacks.
     """
-    # 1. Modern Library Lookup
-    if hasattr(core, 'library') and name in core.library:
-        return core.library[name](**args)
+    try:
+        # 1. Modern Library Lookup
+        # Consolidated loop for cleaner extension
+        modern_modules = [
+            core, web, file_ops, git, nlp, debug_test, tool_creator, knowledge, system
+        ]
 
-    if hasattr(web, 'library') and name in web.library:
-        return web.library[name](**args)
+        for module in modern_modules:
+            if hasattr(module, 'library') and name in module.library:
+                return module.library[name](**args)
 
-    if hasattr(file_ops, 'library') and name in file_ops.library:
-        return file_ops.library[name](**args)
+        # 2. Legacy / Special Cases
 
-    # 2. Legacy / Special Cases
+        # Memory Tools
+        memory_tools = [t['name'] for t in memory.tool_definitions() if isinstance(t, dict) and 'name' in t]
+        if name in memory_tools:
+            return execute_memory_tool(name, args)
 
-    # Memory Tools
-    # Dynamic check against definitions
-    memory_tools = [t['name'] for t in memory.tool_definitions() if isinstance(t, dict) and 'name' in t]
-    if name in memory_tools:
-        return execute_memory_tool(name, args)
+        # Database Tools
+        database_tools = [t['name'] for t in database.tool_definitions() if isinstance(t, dict) and 'name' in t]
+        if name in database_tools:
+            return execute_database_tool(name, args)
 
-    # Database Tools
-    database_tools = [t['name'] for t in database.tool_definitions() if isinstance(t, dict) and 'name' in t]
-    if name in database_tools:
-        return execute_database_tool(name, args)
+        # Learning Tools (Direct Mapping)
+        if name == "learn_repo":
+            return learn_repo_task()
+        elif name == "learn_directory":
+            path = args.get('path')
+            if not path:
+                return "Error: 'path' parameter is required for learn_directory."
+            return learn_directory_task(path)
+        elif name == "learn_url":
+            url = args.get('url')
+            if not url:
+                return "Error: 'url' parameter is required for learn_url."
+            return learn_url_task(url)
 
-    # Learning Tools (Direct Mapping)
-    if name == "learn_repo":
-        return learn_repo_task()
-    elif name == "learn_directory":
-        return learn_directory_task(args.get('path'))
-    elif name == "learn_url":
-        return learn_url_task(args.get('url'))
+        # Display Tools
+        if name == "display_image":
+            path = args.get('path')
+            if not path:
+                return "Error: 'path' parameter is required for display_image."
+            return display_image_task(path)
 
-    # Display Tools
-    if name == "display_image":
-        return display_image_task(args.get('path'))
+        # Backward Compatibility
+        if name == "save_to_file":
+            return save_to_file(args.get('filename'), args.get('content'))
 
-    # Backward Compatibility
-    if name == "save_to_file":
-        return save_to_file(args.get('filename'), args.get('content'))
+        return f"Tool {name} not found."
 
-    return f"Tool {name} not found."
+    except Exception as e:
+        return f"Error executing tool '{name}': {e}\nTraceback:\n{traceback.format_exc()}"

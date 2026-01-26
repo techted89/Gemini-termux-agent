@@ -1,5 +1,7 @@
 import google.genai as genai
 from googleapiclient.discovery import build
+import requests
+import os
 import config
 from utils.web_scraper import scrape_text
 
@@ -11,18 +13,7 @@ def google_search(
     num: int = 5,
 ) -> str:
     """
-    Perform a Google Custom Search and return the top results formatted for display.
-    
-    If the API key or Custom Search CX is missing or left as the placeholder values, the function returns an error string indicating the missing configuration.
-    
-    Parameters:
-        query (str): The search query.
-        api_key (str): Google API key (defaults to config.GOOGLE_API_KEY).
-        cx (str): Custom Search Engine ID (defaults to config.CUSTOM_SEARCH_CX).
-        num (int): Number of results to retrieve.
-    
-    Returns:
-        str: Concatenated result entries where each entry includes `Title`, `URL`, and `Snippet` on separate lines, or an error string if configuration is missing.
+    Performs a Google search and returns the top results as a formatted string.
     """
     if not api_key or api_key == "YOUR_GOOGLE_SEARCH_API_KEY":
         return "Error: GOOGLE_API_KEY is not configured."
@@ -46,18 +37,27 @@ def google_search(
         ]
     )
 
+def download_file_task(url, filepath):
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()
+        expanded_path = os.path.expanduser(filepath)
+        with open(expanded_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        return f"Downloaded {url} to {filepath}"
+    except Exception as e:
+        return f"Error downloading file: {e}"
+
+def visit_page_task(url):
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        return f"Error visiting page: {e}"
 
 def tool_definitions():
-    """
-    Provide Tool metadata that declares the available tool functions for the AI interface.
-    
-    Each returned Tool contains FunctionDeclaration entries for:
-    - `google_search`: performs a Google search and requires the `query` parameter.
-    - `scrape_text`: scrapes text from a URL and requires the `url` parameter.
-    
-    Returns:
-        list: A list of `genai.types.Tool` objects describing the available tool functions.
-    """
     return [
         genai.types.Tool(
             function_declarations=[
@@ -86,6 +86,29 @@ def tool_definitions():
                         "required": ["url"],
                     },
                 ),
+                genai.types.FunctionDeclaration(
+                    name="download_file",
+                    description="Downloads a file from a URL to a local path.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "url": {"type": "string"},
+                            "filepath": {"type": "string"}
+                        },
+                        "required": ["url", "filepath"],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="visit_page",
+                    description="Visits a webpage and returns the raw HTML content.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "url": {"type": "string"}
+                        },
+                        "required": ["url"],
+                    },
+                ),
             ]
         )
     ]
@@ -93,4 +116,6 @@ def tool_definitions():
 library = {
     "google_search": google_search,
     "scrape_text": scrape_text,
+    "download_file": download_file_task,
+    "visit_page": visit_page_task,
 }

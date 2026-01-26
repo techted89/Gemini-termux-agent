@@ -19,5 +19,5 @@ def run_agent_step(model_wrapper, user_query, user_id, conversation_history, pri
     from api import agentic_reason_and_act
     # We pass the full history plus the new query
     thought, function_call = agentic_reason_and_act(model_wrapper, conversation_history)
-    
+
     return thought, function_call
