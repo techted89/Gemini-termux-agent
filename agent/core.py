@@ -76,4 +76,6 @@ def run_agent_step(models, conversation_history, user_id, user_input=None, print
         return False, thought, user_query
 
     # 5. Handle Final Response
+    if thought:
+        conversation_history.append({"role": "model", "parts": [thought]})
     return True, thought, user_query
