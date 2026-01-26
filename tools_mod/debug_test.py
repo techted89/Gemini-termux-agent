@@ -1,7 +1,7 @@
 import google.genai as genai
 import subprocess
 import sys
-
+import time
 
 def run_tests(filepath):
     """
@@ -47,6 +47,26 @@ def run_tests(filepath):
 
     return results
 
+def debug_failure_task(error_type):
+    """
+    Intentionally raises an error to test the agent's error handling.
+    Supported types: 'ValueError', 'ZeroDivisionError', 'Timeout', 'RuntimeError'
+    """
+    if error_type == "ValueError":
+        raise ValueError("This is a debug ValueError.")
+    elif error_type == "ZeroDivisionError":
+        return 1 / 0
+    elif error_type == "Timeout":
+        time.sleep(60) # Simulate timeout (may not actually trigger agent timeout immediately)
+        return "Finished wait (did not timeout system-level)."
+    elif error_type == "RuntimeError":
+        raise RuntimeError("This is a debug RuntimeError.")
+    else:
+        return f"Unknown error type: {error_type}"
+
+def debug_echo_task(content):
+    """Echoes content back. Useful for verifying tool connectivity."""
+    return f"Debug Echo: {content}"
 
 def tool_definitions():
     return [
@@ -65,11 +85,38 @@ def tool_definitions():
                         },
                         "required": ["filepath"],
                     },
-                )
+                ),
+                genai.types.FunctionDeclaration(
+                    name="debug_failure",
+                    description="Intentionally raises an error for debugging purposes.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "error_type": {
+                                "type": "string",
+                                "description": "Type of error to raise (ValueError, ZeroDivisionError, Timeout, RuntimeError)"
+                            }
+                        },
+                        "required": ["error_type"],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="debug_echo",
+                    description="Echoes the input content back.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "content": {"type": "string"}
+                        },
+                        "required": ["content"],
+                    },
+                ),
             ]
         )
     ]
 
 library = {
     "run_tests": run_tests,
+    "debug_failure": debug_failure_task,
+    "debug_echo": debug_echo_task,
 }
