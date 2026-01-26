@@ -1,5 +1,5 @@
 import os
-from utils.database import store_embedding
+from utils.database import store_embedding, store_embeddings
 from urllib.parse import urlparse
 import config
 
@@ -50,6 +50,28 @@ def learn_directory(path):
     if not os.path.isdir(path):
         return f"Path is not a valid directory: {path}"
 
+    batch_texts = []
+    batch_metadatas = []
+    batch_size = 50
+
+    def process_batch():
+        nonlocal batch_texts, batch_metadatas
+        if not batch_texts:
+            return
+
+        if store_embeddings(batch_texts, batch_metadatas):
+             for m in batch_metadatas:
+                 print(f"  - Learned {m['source']}")
+        else:
+             # Fallback
+             print("  - Batch failed, falling back to single inserts...")
+             for t, m in zip(batch_texts, batch_metadatas):
+                 store_embedding(t, m)
+                 print(f"  - Learned {m['source']} (fallback)")
+
+        batch_texts[:] = []
+        batch_metadatas[:] = []
+
     for root, _, files in os.walk(path):
         # Skip ignored directories
         if any(f"/{ignored}/" in root.replace(path, "") for ignored in config.PROJECT_CONTEXT_IGNORE) or any(root.endswith(ignored) for ignored in config.PROJECT_CONTEXT_IGNORE):
@@ -64,8 +86,16 @@ def learn_directory(path):
             try:
                 with open(file_path, "r", errors="ignore") as f:
                     content = f.read()
-                learn_file_content(file_path, content)
+
+                batch_texts.append(content)
+                batch_metadatas.append({"source": file_path})
+
+                if len(batch_texts) >= batch_size:
+                    process_batch()
+
             except Exception as e:
                 print(f"  - Error reading {file_path}: {e}")
+
+    process_batch()
 
     return f"Finished learning directory: {path}"

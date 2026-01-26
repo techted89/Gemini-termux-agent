@@ -2,7 +2,7 @@ import os
 import subprocess
 import fnmatch
 from google.genai import types as genai_types
-from utils.database import store_embedding
+from utils.database import store_embedding, store_embeddings
 import config
 from utils.learning import learn_directory, learn_url
 import logging
@@ -44,6 +44,29 @@ def learn_repo_task():
                 files.append(os.path.join(root, filename))
 
     stored_count = 0
+    batch_texts = []
+    batch_metadatas = []
+    batch_size = 50
+
+    def process_batch():
+        nonlocal batch_texts, batch_metadatas, stored_count
+        if not batch_texts:
+            return
+
+        if store_embeddings(batch_texts, batch_metadatas):
+             stored_count += len(batch_texts)
+        else:
+             # Fallback
+             for t, m in zip(batch_texts, batch_metadatas):
+                 try:
+                     store_embedding(t, m)
+                     stored_count += 1
+                 except Exception:
+                     pass
+
+        batch_texts[:] = []
+        batch_metadatas[:] = []
+
     for filepath in files:
         # Extra check for patterns not in .gitignore
         if any(fnmatch.fnmatch(filepath, p) for p in ignored_patterns if p != ""):
@@ -55,8 +78,13 @@ def learn_repo_task():
 
             # We use the filepath as 'source' metadata
             metadata = {"source": filepath}
-            store_embedding(content, metadata, collection_name="agent_learning")
-            stored_count += 1
+
+            batch_texts.append(content)
+            batch_metadatas.append(metadata)
+
+            if len(batch_texts) >= batch_size:
+                process_batch()
+
         except FileNotFoundError:
             logger.error(f"File not found: {filepath}", exc_info=True)
         except PermissionError:
@@ -65,6 +93,8 @@ def learn_repo_task():
             logger.error(f"Unicode decode error for file: {filepath}", exc_info=True)
         except Exception as e:
             logger.exception(f"An unexpected error occurred while processing {filepath}: {e}")
+
+    process_batch()
 
     return f"Successfully stored content from {stored_count} files in the 'agent_learning' collection."
 

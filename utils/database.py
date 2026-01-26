@@ -75,6 +75,16 @@ def store_embedding(text, metadata, collection_name="agent_learning"):
         return True
     except Exception: return False
 
+def store_embeddings(texts, metadatas, collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        ids = [hashlib.md5(t.encode()).hexdigest() for t in texts]
+        collection.upsert(documents=texts, metadatas=metadatas, ids=ids)
+        return True
+    except Exception as e:
+        logger.error(f"Batch store error: {e}")
+        return False
+
 def query_embeddings(query_text, n_results=10, collection_name="agent_learning"):
     try:
         collection = db_client.get_or_create_collection(collection_name)
