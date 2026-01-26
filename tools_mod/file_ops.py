@@ -8,6 +8,7 @@ import subprocess
 import google.genai as genai
 from utils.commands import run_command
 from utils.file_system import save_to_file
+from tools_mod.core import read_file_task, execute_shell_command
 
 
 def lint_python_file_task(filepath, linter="flake8"):
@@ -177,12 +178,60 @@ def save_to_file_task(filename, content):
     """Wrapper for saving to file."""
     return save_to_file(filename, content)
 
+# Aliases for dispatcher compatibility
+list_files = list_directory_recursive_task
+read_file = read_file_task
+write_file = save_to_file_task
+run_command_alias = execute_shell_command
+
 from google.genai import types as genai_types
 
 def tool_definitions():
     return [
         genai_types.Tool(
             function_declarations=[
+                # ... existing tools ...
+                genai_types.FunctionDeclaration(
+                    name="list_files",
+                    description="List files in a directory.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="read_file",
+                    description="Read file content.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"path": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["path"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="write_file",
+                    description="Write content to a file.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={
+                            "path": genai_types.Schema(type=genai_types.Type.STRING),
+                            "content": genai_types.Schema(type=genai_types.Type.STRING),
+                        },
+                        required=["path", "content"],
+                    ),
+                ),
+                genai_types.FunctionDeclaration(
+                    name="run_command",
+                    description="Run a shell command.",
+                    parameters=genai_types.Schema(
+                        type=genai_types.Type.OBJECT,
+                        properties={"command": genai_types.Schema(type=genai_types.Type.STRING)},
+                        required=["command"],
+                    ),
+                ),
+                # ... re-export existing ones if needed, but the prompt focused on these 4
+                genai_types.FunctionDeclaration(
                 genai.types.FunctionDeclaration(
                     name="lint_python_file",
                     description="Lint Python",
@@ -341,6 +390,10 @@ def tool_definitions():
     ]
 
 library = {
+    "list_files": list_files,
+    "read_file": read_file,
+    "write_file": write_file,
+    "run_command": run_command_alias,
     "lint_python_file": lint_python_file_task,
     "format_code": format_code_task,
     "apply_sed": apply_sed_task,
