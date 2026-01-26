@@ -27,24 +27,12 @@ def run_agent_step(model_wrapper, user_query, user_id, conversation_history, pri
         # Execute the tool using execute_tool
         result = execute_tool(function_call, model_wrapper)
 
-        # Append the result to history as a function_response
-        # This part depends on how the history structure is managed.
-        # Typically we'd add a "function_response" part.
-        # Since this function returns (done, response, user_input), we delegate the history update to the caller OR handle it here if 'conversation_history' is mutable.
-        # But wait, the instruction says "Append the result to history as a function_response".
-        # Assuming history is a list of contents.
-
-        # NOTE: The caller (main.py) manages the loop. If we return False (not done), it loops back.
-        # Ideally we should update history here.
-        # But without knowing the exact history format (Gemini object vs list of dicts), I'll assume standard list.
-
-        # Actually, main.py passes `history` to `run_agent_step`.
-        # I should append the tool response to `conversation_history`.
-        # However, `agentic_reason_and_act` likely doesn't modify it in place?
-        # Let's assume standard Gemini flow: User -> Model (Call) -> User (Result) -> Model.
-
-        # For this specific task, I will return the result string as the 'response' and done=False.
-        # The prompt says: "Return False, f"Tool Output: {result}", user_query"
+        # Append the result to history as a function_response to maintain context
+        # Assuming conversation_history is a list of dicts (Gemini/standard format)
+        if isinstance(conversation_history, list):
+            # Typically: {"role": "function", "name": name, "content": result} or similar
+            # For this agent's simplified flow (often mimicking user input for tool output):
+            conversation_history.append({"role": "user", "parts": [f"Tool Output: {result}"]})
 
         return False, f"Tool Output: {result}", user_query
 

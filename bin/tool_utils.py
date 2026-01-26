@@ -49,7 +49,8 @@ def execute_tool(function_call, models):
         elif name == "read_file":
             return read_file_task(get_arg(['path', 'filepath', 'filename']))
         elif name == "write_file":
-            return create_file_task(get_arg(['path', 'filepath', 'filename']), get_arg(['content', 'data']))
+            # Using save_to_file_task for consistency with file_ops tools
+            return save_to_file_task(get_arg(['path', 'filepath', 'filename']), get_arg(['content', 'data']))
 
         # CORE / RUN COMMAND
         elif name == "run_command":
