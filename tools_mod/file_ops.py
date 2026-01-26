@@ -170,7 +170,6 @@ def chmod_task(path, mode):
         safe_mode = shlex.quote(mode)
         safe_path = shlex.quote(os.path.expanduser(path))
         return run_command(f"chmod {safe_mode} {safe_path}", shell=True, check_output=True)
-        return run_command(f"chmod {mode} {shlex.quote(os.path.expanduser(path))}", shell=True, check_output=True)
     except Exception as e:
         return f"Error: {e}"
 
