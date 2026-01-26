@@ -51,28 +51,26 @@ def _get_validated_db_path():
     os.makedirs(db_path, exist_ok=True)
     return db_path
 
-def _init_db_client():
-    """Initializes the ChromaDB client with logging."""
-    path = _get_validated_db_path()
-    logger.info(f"Initializing ChromaDB PersistentClient at: {path}")
-    return chromadb.PersistentClient(path=path)
-
-db_client = _init_db_client()
+import logging
+logger = logging.getLogger(__name__)
 
 def get_relevant_history(query, n_results=15):
     try:
-        collection = get_collection("agent_memory")
+        collection = db_client.get_or_create_collection("agent_memory")
         results = collection.query(query_texts=[query], n_results=n_results)
         return results['documents'][0] if results['documents'] else []
-    except Exception: return []
+    except Exception:
+        logger.exception("get_relevant_history failed")
+        return []
 
 def get_relevant_context(query, n_results=5):
     try:
-        collection = get_collection("agent_memory")
+        collection = db_client.get_or_create_collection("agent_memory")
         results = collection.query(query_texts=[query], n_results=n_results)
         return "\n".join(results['documents'][0]) if results['documents'] else ""
-    except Exception: return ""
-
+    except Exception:
+        logger.exception("get_relevant_context failed")
+        return ""
 def store_conversation_turn(user_query, assistant_response, user_id):
     try:
         collection = get_collection("agent_memory")
