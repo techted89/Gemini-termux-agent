@@ -84,10 +84,8 @@ def register_tool_module_task(module_name):
             new_list_content = f"{current_list}, {module_name}"
             content = content.replace(current_list, new_list_content)
         else:
-            # Fallback: Maybe the list structure changed?
-            # We can't safely modify execute_tool if we can't find the list.
-            # But wait, if __init__.py logic is just "iterate over this list", updating the list is enough.
-            pass
+            # Warn about partial registration
+            print(f"Warning: Could not add {module_name} to modern_modules list. Tool definitions registered but execution may fail.")
 
         with open(init_path, "w", encoding="utf-8") as f:
             f.write(content)
