@@ -10,6 +10,7 @@ from utils.commands import run_command
 from utils.file_system import save_to_file
 from tools_mod.core import read_file_task, execute_shell_command
 
+
 def lint_python_file_task(filepath, linter="flake8"):
     """Runs a linter on a file."""
     cmd = f"{sys.executable} -m {linter} {shlex.quote(os.path.expanduser(filepath))}"
@@ -144,6 +145,7 @@ def open_in_external_editor_task(filepath):
              return f"Opened {filepath} with xdg-open."
         except Exception as xdg_error:
              # Fallback to termux-open using shell
+             # Check if termux-open exists via shell
              try:
                  run_command("command -v termux-open", shell=True, check_output=True)
                  cmd = f"termux-open {expanded_path}"
@@ -230,6 +232,7 @@ def tool_definitions():
                 ),
                 # ... re-export existing ones if needed, but the prompt focused on these 4
                 genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="lint_python_file",
                     description="Lint Python",
                     parameters=genai_types.Schema(
@@ -238,7 +241,7 @@ def tool_definitions():
                         required=["filepath"],
                     ),
                 ),
-                genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="format_code",
                     description="Format Python",
                     parameters=genai_types.Schema(
@@ -247,7 +250,7 @@ def tool_definitions():
                         required=["filepath"],
                     ),
                 ),
-                genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="apply_sed",
                     description="Apply Sed",
                     parameters=genai_types.Schema(
@@ -259,7 +262,7 @@ def tool_definitions():
                         required=["filepath", "sed_expression"],
                     ),
                 ),
-                genai_types.FunctionDeclaration(
+                genai.types.FunctionDeclaration(
                     name="create_directory",
                     description="Create Dir",
                     parameters=genai_types.Schema(

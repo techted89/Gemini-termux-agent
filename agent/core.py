@@ -39,3 +39,5 @@ def run_agent_step(model_wrapper, user_query, user_id, conversation_history, pri
     else:
         # No tool call, just thought/response
         return True, thought, user_query
+
+    return thought, function_call
