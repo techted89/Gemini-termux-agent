@@ -1,4 +1,4 @@
-from . import core, web, file_ops, memory, database, learning, display, git, nlp, debug_test, tool_creator
+from . import core, web, file_ops, memory, database, learning, display, git, nlp, debug_test, tool_creator, knowledge
 from .memory import execute_memory_tool
 from .database import execute_database_tool
 from .display import display_image_task
@@ -20,6 +20,7 @@ def get_all_tool_definitions():
     all_tools.extend(nlp.tool_definitions())
     all_tools.extend(debug_test.tool_definitions())
     all_tools.extend(tool_creator.tool_definitions())
+    all_tools.extend(knowledge.tool_definitions())
 
     # Legacy Modules (Return List[Dict] or List[Tool])
     all_tools.extend(memory.tool_definitions())
@@ -40,7 +41,7 @@ def execute_tool(name, args):
     # 1. Modern Library Lookup
     # Consolidated loop for cleaner extension
     modern_modules = [
-        core, web, file_ops, git, nlp, debug_test, tool_creator
+        core, web, file_ops, git, nlp, debug_test, tool_creator, knowledge
     ]
 
     for module in modern_modules:

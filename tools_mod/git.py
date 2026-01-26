@@ -28,6 +28,20 @@ def git_branch_task(new_branch_name=None):
         )
     return run_command("git branch", shell=True, check_output=True)
 
+def git_commit_task(message):
+    sanitized_msg = shlex.quote(message)
+    # Uses -am to add modified files automatically.
+    return run_command(f"git commit -am {sanitized_msg}", shell=True, check_output=True)
+
+def git_diff_task():
+    return run_command("git diff", shell=True, check_output=True)
+
+def git_log_task(limit=5):
+    return run_command(f"git log -n {limit}", shell=True, check_output=True)
+
+def git_add_task(files):
+    sanitized_files = shlex.quote(files)
+    return run_command(f"git add {sanitized_files}", shell=True, check_output=True)
 
 def tool_definitions():
     return [
@@ -65,6 +79,38 @@ def tool_definitions():
                         "required": [],
                     },
                 ),
+                genai.types.FunctionDeclaration(
+                    name="git_commit",
+                    description="Git Commit (adds modified files)",
+                    parameters={
+                        "type": "object",
+                        "properties": {"message": {"type": "string"}},
+                        "required": ["message"],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="git_diff",
+                    description="Git Diff",
+                    parameters={"type": "object", "properties": {}},
+                ),
+                genai.types.FunctionDeclaration(
+                    name="git_log",
+                    description="Git Log",
+                    parameters={
+                        "type": "object",
+                        "properties": {"limit": {"type": "integer"}},
+                        "required": [],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="git_add",
+                    description="Git Add",
+                    parameters={
+                        "type": "object",
+                        "properties": {"files": {"type": "string"}},
+                        "required": ["files"],
+                    },
+                ),
             ]
         )
     ]
@@ -74,4 +120,8 @@ library = {
     "git_pull": git_pull_task,
     "git_push": git_push_task,
     "git_branch": git_branch_task,
+    "git_commit": git_commit_task,
+    "git_diff": git_diff_task,
+    "git_log": git_log_task,
+    "git_add": git_add_task,
 }

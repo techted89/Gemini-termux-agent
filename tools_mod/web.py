@@ -1,5 +1,7 @@
 import google.genai as genai
 from googleapiclient.discovery import build
+import requests
+import os
 import config
 from utils.web_scraper import scrape_text
 
@@ -35,6 +37,25 @@ def google_search(
         ]
     )
 
+def download_file_task(url, filepath):
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()
+        expanded_path = os.path.expanduser(filepath)
+        with open(expanded_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        return f"Downloaded {url} to {filepath}"
+    except Exception as e:
+        return f"Error downloading file: {e}"
+
+def visit_page_task(url):
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        return f"Error visiting page: {e}"
 
 def tool_definitions():
     return [
@@ -65,6 +86,29 @@ def tool_definitions():
                         "required": ["url"],
                     },
                 ),
+                genai.types.FunctionDeclaration(
+                    name="download_file",
+                    description="Downloads a file from a URL to a local path.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "url": {"type": "string"},
+                            "filepath": {"type": "string"}
+                        },
+                        "required": ["url", "filepath"],
+                    },
+                ),
+                genai.types.FunctionDeclaration(
+                    name="visit_page",
+                    description="Visits a webpage and returns the raw HTML content.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "url": {"type": "string"}
+                        },
+                        "required": ["url"],
+                    },
+                ),
             ]
         )
     ]
@@ -72,4 +116,6 @@ def tool_definitions():
 library = {
     "google_search": google_search,
     "scrape_text": scrape_text,
+    "download_file": download_file_task,
+    "visit_page": visit_page_task,
 }
