@@ -149,7 +149,7 @@ def open_in_external_editor_task(filepath):
                  cmd = f"termux-open {expanded_path}"
                  run_command(cmd, shell=True, check_output=True)
                  return f"Opened {filepath} with termux-open (xdg-open failed: {xdg_error})."
-             except:
+             except Exception:
                  return f"Failed to open {filepath}. xdg-open failed: {xdg_error}. termux-open not found."
 
     except Exception as e:
