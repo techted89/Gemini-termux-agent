@@ -6,6 +6,9 @@ import chromadb
 from chromadb.config import Settings
 import config
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     import pysqlite3
@@ -17,11 +20,17 @@ def _get_validated_db_path():
     """Validates and returns the ChromaDB path."""
     # Default to a relative path for portability
     db_path = os.environ.get("CHROMA_DB_PATH", "chroma_db")
-    if not os.path.exists(db_path):
-        os.makedirs(db_path)
+    # Atomic creation to avoid TOCTOU race
+    os.makedirs(db_path, exist_ok=True)
     return db_path
 
-db_client = chromadb.PersistentClient(path=_get_validated_db_path())
+def _init_db_client():
+    """Initializes the ChromaDB client with logging."""
+    path = _get_validated_db_path()
+    logger.info(f"Initializing ChromaDB PersistentClient at: {path}")
+    return chromadb.PersistentClient(path=path)
+
+db_client = _init_db_client()
 
 def get_relevant_history(query, n_results=15):
     try:
@@ -105,9 +114,14 @@ def get_all_collections():
     except Exception: return []
 
 def get_collection_count(collection_name="agent_memory"):
-    try: return db_client.get_collection(collection_name).count()
-    except: return 0
+    try:
+        return db_client.get_collection(collection_name).count()
+    except Exception as e:
+        logger.error(f"Error getting collection count for {collection_name}: {e}")
+        return 0
 
 def delete_embeddings(collection_name="agent_learning"):
-    try: db_client.delete_collection(collection_name)
-    except Exception: pass
+    try:
+        db_client.delete_collection(collection_name)
+    except Exception as e:
+        logger.error(f"Error deleting collection {collection_name}: {e}")
