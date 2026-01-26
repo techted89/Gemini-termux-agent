@@ -75,6 +75,21 @@ def store_embedding(text, metadata, collection_name="agent_learning"):
         return True
     except Exception: return False
 
+def store_embeddings(texts, metadatas, collection_name="agent_learning"):
+    try:
+        collection = db_client.get_or_create_collection(collection_name)
+        doc_ids = []
+        for text, metadata in zip(texts, metadatas):
+            if metadata and 'source' in metadata:
+                doc_ids.append(hashlib.md5(metadata['source'].encode()).hexdigest())
+            else:
+                doc_ids.append(hashlib.md5(text.encode()).hexdigest())
+        collection.upsert(documents=texts, metadatas=metadatas, ids=doc_ids)
+        return True
+    except Exception as e:
+        logger.error(f"Error storing embeddings: {e}")
+        return False
+
 def query_embeddings(query_text, n_results=10, collection_name="agent_learning"):
     try:
         collection = db_client.get_or_create_collection(collection_name)
