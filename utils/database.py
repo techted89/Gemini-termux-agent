@@ -106,9 +106,9 @@ def query_embeddings(query_text, n_results=10, collection_name="agent_learning")
     try:
         collection = db_client.get_or_create_collection(collection_name)
         return collection.query(query_texts=[query_text], n_results=n_results, include=["documents", "metadatas", "distances"])
-    except Exception: return None
     except Exception:
-        return False
+        logger.exception("query_embeddings failed for collection %s", collection_name)
+        return None
 
 
 def store_embeddings(texts, metadatas, collection_name="agent_learning"):
